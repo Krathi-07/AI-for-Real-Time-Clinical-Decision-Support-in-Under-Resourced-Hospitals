@@ -1,0 +1,7 @@
+[project]
+name = "clinical-ai-decision-support"
+version = "0.1.0"
+description = "Virtual junior doctor AI for under-resourced hospitals"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []

@@ -1,0 +1,38 @@
+# Virtual environment — never commit
+.venv/
+
+# Environment variables — contains secrets
+.env
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Patient data — never commit under any circumstances
+data/raw/
+data/processed/
+*.csv
+*.parquet
+*.json.gz
+
+# Trained model files — too large for git
+models/
+*.pkl
+*.pt
+*.h5
+*.onnx
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# VS Code settings
+.vscode/
+
+# uv cache
+.uv/
+
+# OS files
+.DS_Store
+Thumbs.db

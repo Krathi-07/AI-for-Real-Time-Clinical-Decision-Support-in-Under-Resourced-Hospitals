@@ -1,0 +1,47 @@
+# FHIR — hospital data standard
+fhir.resources==7.1.0
+requests==2.32.3
+
+# ML — early warning models
+xgboost==2.1.1
+lightgbm==4.5.0
+scikit-learn==1.5.2
+pandas==2.2.3
+numpy>=1.26.0,<2.0.0
+
+# Deep Learning — multimodal AI
+torch==2.4.1
+torchvision==0.19.1
+
+# NLP — clinical notes
+transformers==4.44.2
+datasets==3.0.1
+tokenizers==0.19.1
+
+# Explainability
+shap==0.46.0
+lime==0.2.0.1
+
+# Federated Learning
+flwr>=1.5.0
+
+# Agentic orchestration
+langgraph==0.2.28
+langchain==0.3.1
+langchain-core==0.3.6
+
+# API
+fastapi==0.115.0
+uvicorn==0.31.0
+pydantic==2.9.2
+
+# Utilities
+python-dotenv==1.0.1
+tqdm==4.66.5
+matplotlib==3.9.2
+seaborn==0.13.2
+jupyter==1.1.1
+ipykernel==6.29.5
+
+# Code quality
+ruff==0.6.8
