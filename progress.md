@@ -465,3 +465,26 @@ pip install fastapi uvicorn     # API backend
 ---
 
 *Update this file after every learning session. Track what you've built, what you've understood, and what questions remain.*
+
+### Session 2 — FHIR Data Layer (Phase 1 started)
+- Built `src/fhir/client.py` — connects to any FHIR R4 server, fetches Bundles
+- Built `src/fhir/parser.py` — extracts Patient, Observations, Conditions from Bundle
+- Built `src/fhir/feature_builder.py` — converts LOINC observations to ML feature vectors
+- Implemented qSOFA bedside sepsis scoring (respiratory rate + systolic BP)
+- Implemented data completeness assessment — system knows when not to predict
+- Tested full pipeline on real HAPI FHIR server patient `sindhu-syn-000005`
+- Committed 591 lines, pushed to GitHub
+
+### Key clinical concepts learned
+- qSOFA score: RR ≥22 + SBP ≤100 = sepsis high risk (score ≥2)
+- MAP (Mean Arterial Pressure) < 65 mmHg = septic shock threshold
+- Lactate > 2 mmol/L = strongest single sepsis predictor
+- Sentinel value -1.0 used for missing features (not 0, which is a valid measurement)
+- Completeness < 40% = model should abstain, recommend manual assessment
+
+### Next Session — Phase 1 continued
+- [ ] Build `src/models/early_warning.py` — XGBoost sepsis model
+- [ ] Generate synthetic training data (until MIMIC-IV access granted)
+- [ ] Train model, evaluate with ROC-AUC
+- [ ] Add SHAP explanations
+- [ ] Wire model to FHIR pipeline end-to-end
