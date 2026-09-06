@@ -1,17 +1,16 @@
-"""
-FHIR REST client — connects to any FHIR R4 server and fetches patient data.
+﻿"""
+FHIR REST client â€” connects to any FHIR R4 server and fetches patient data.
 
 Why this exists:
   Every hospital runs a different EHR system, but all expose a FHIR R4 API.
-  This client is the single point of contact — change FHIR_BASE_URL and it
+  This client is the single point of contact â€” change FHIR_BASE_URL and it
   works with any hospital's server without touching any other code.
 """
 
 import requests
 from requests.exceptions import RequestException
 
-
-# Free public FHIR R4 test server — use this for all development
+# Free public FHIR R4 test server â€” use this for all development
 # In production, this becomes the hospital's actual FHIR server URL
 FHIR_BASE_URL = "https://hapi.fhir.org/baseR4"
 
@@ -27,9 +26,9 @@ def fetch_patient_bundle(patient_id: str) -> dict:
     """
     Fetch everything available for a patient in one API call.
 
-    The $everything operation is the most important FHIR endpoint —
+    The $everything operation is the most important FHIR endpoint â€”
     it returns ALL resources linked to a patient: vitals, labs,
-    diagnoses, medications, allergies — in one Bundle.
+    diagnoses, medications, allergies â€” in one Bundle.
 
     Args:
         patient_id: The FHIR patient ID (e.g. "592442")
@@ -55,7 +54,7 @@ def fetch_observations(patient_id: str) -> dict:
     """
     Fetch only Observation resources for a patient.
 
-    More targeted than $everything — useful when you only need
+    More targeted than $everything â€” useful when you only need
     vitals and lab values, not the full record.
 
     Args:
@@ -80,11 +79,11 @@ def fetch_observations(patient_id: str) -> dict:
         raise RuntimeError(f"Failed to fetch observations for {patient_id}: {e}") from e
 
 
-def search_patients(family_name: str = None, count: int = 5) -> dict:
+def search_patients(family_name: str | None = None, count: int = 5) -> dict:
     """
     Search for patients on the FHIR server.
 
-    Useful for development — lets us find real patient IDs
+    Useful for development â€” lets us find real patient IDs
     on the HAPI test server to experiment with.
 
     Args:
@@ -113,7 +112,7 @@ def check_server_health() -> bool:
     """
     Ping the FHIR server to verify it is reachable.
 
-    Always call this first in your pipeline — fail fast if
+    Always call this first in your pipeline â€” fail fast if
     the server is down rather than getting cryptic errors later.
 
     Returns:

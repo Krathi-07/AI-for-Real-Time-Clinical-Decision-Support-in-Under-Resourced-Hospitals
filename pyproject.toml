@@ -10,4 +10,12 @@ dependencies = [
     "scispacy>=0.2.4",
     "spacy==3.7.5",
     "xgboost>=3.4.1",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "pydantic>=2.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.6",
 ]

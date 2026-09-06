@@ -1,5 +1,5 @@
-"""
-FHIR Bundle parser — extracts structured data from raw FHIR Bundle dicts.
+﻿"""
+FHIR Bundle parser â€” extracts structured data from raw FHIR Bundle dicts.
 
 Why this exists:
   FHIR Bundles are deeply nested JSON. A Bundle contains entries, each entry
@@ -12,7 +12,7 @@ Learning note:
   This parser opens the envelope and sorts the letters by type.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 
 def extract_resource_type(entry: dict) -> str:
@@ -37,7 +37,7 @@ def parse_patient(bundle: dict) -> dict:
         if extract_resource_type(entry) == "Patient":
             resource = entry["resource"]
 
-            # Extract name — FHIR stores names as a list of name objects
+            # Extract name â€” FHIR stores names as a list of name objects
             name = ""
             if resource.get("name"):
                 name_obj = resource["name"][0]
@@ -49,7 +49,7 @@ def parse_patient(bundle: dict) -> dict:
             age = None
             if resource.get("birthDate"):
                 birth_year = int(resource["birthDate"][:4])
-                age = datetime.now().year - birth_year
+                age = datetime.now(tz=UTC).year - birth_year
 
             return {
                 "id": resource.get("id", ""),
@@ -66,7 +66,7 @@ def parse_observations(bundle: dict) -> list[dict]:
     """
     Extract all Observation resources from a Bundle.
 
-    Observations are the most important resource for our AI —
+    Observations are the most important resource for our AI â€”
     they contain every vital sign and lab result. Each Observation
     has a LOINC code identifying WHAT was measured, and a value
     showing the result.
@@ -85,7 +85,7 @@ def parse_observations(bundle: dict) -> list[dict]:
 
         resource = entry["resource"]
 
-        # Extract the LOINC code — this tells us WHAT was measured
+        # Extract the LOINC code â€” this tells us WHAT was measured
         loinc_code = ""
         display = ""
         if resource.get("code", {}).get("coding"):
@@ -93,7 +93,7 @@ def parse_observations(bundle: dict) -> list[dict]:
             loinc_code = coding.get("code", "")
             display = coding.get("display", "")
 
-        # Extract the value — can be a quantity, string, or coded value
+        # Extract the value â€” can be a quantity, string, or coded value
         value = None
         unit = ""
 
@@ -135,7 +135,7 @@ def parse_conditions(bundle: dict) -> list[dict]:
     """
     Extract Condition resources (diagnoses) from a Bundle.
 
-    Conditions use ICD-10 codes — the international disease classification.
+    Conditions use ICD-10 codes â€” the international disease classification.
     For our AI, conditions give historical context:
     a patient with diabetes has different risk profiles than one without.
 
@@ -161,7 +161,7 @@ def parse_conditions(bundle: dict) -> list[dict]:
             icd_code = coding.get("code", "")
             display = coding.get("display", "")
 
-        # Clinical status — active, resolved, inactive
+        # Clinical status â€” active, resolved, inactive
         status = ""
         if resource.get("clinicalStatus", {}).get("coding"):
             status = resource["clinicalStatus"]["coding"][0].get("code", "")
@@ -180,7 +180,7 @@ def parse_bundle_summary(bundle: dict) -> dict:
     """
     Parse a full Bundle and return a structured summary.
 
-    This is the main function your pipeline will call —
+    This is the main function your pipeline will call â€”
     it runs all parsers and returns everything in one clean dict.
 
     Args:
@@ -207,3 +207,5 @@ def parse_bundle_summary(bundle: dict) -> dict:
             ),
         },
     }
+
+

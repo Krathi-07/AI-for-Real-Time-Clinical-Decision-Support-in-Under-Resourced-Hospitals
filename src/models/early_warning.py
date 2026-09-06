@@ -24,7 +24,6 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import xgboost as xgb
@@ -311,7 +310,7 @@ class EarlyWarningSepsis:
             # to take when a value is missing. We use -1.0 as sentinel
             # but XGBoost also supports np.nan natively.
         )
-        self._calibrated: Optional[CalibratedClassifierCV] = None
+        self._calibrated: CalibratedClassifierCV | None = None
         self._explainer = None
         self._is_trained: bool = False
         self._train_auc: float = 0.0
@@ -667,7 +666,7 @@ class EarlyWarningSepsis:
         logger.info(f"Model saved to {path}")
 
     @classmethod
-    def load(cls, path: str | Path) -> "EarlyWarningSepsis":
+    def load(cls, path: str | Path) -> EarlyWarningSepsis:
         """Load a previously saved model."""
         import pickle
         path = Path(path)

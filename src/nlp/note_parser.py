@@ -1,7 +1,10 @@
 ﻿from __future__ import annotations
+
 import re
 import warnings
 from dataclasses import dataclass, field
+from typing import ClassVar
+
 import spacy
 
 warnings.filterwarnings("ignore", message=".*W095.*")
@@ -80,7 +83,7 @@ VITAL_PATTERNS = [
 ]
 
 class ClinicalNoteParser:
-    NEGATION_TRIGGERS = {
+    NEGATION_TRIGGERS: ClassVar[set] = {
         "no", "not", "without", "denies", "deny", "denying",
         "absent", "absence", "negative", "negative for",
         "rules out", "ruled out", "rule out",
@@ -209,4 +212,7 @@ if __name__ == "__main__":
         print("PASS - no negated entities in positive lists")
         print(f"   Negated:  {r2.negated_entities}")
         print(f"   Positive: {r2.diseases}")
+
+
+
 

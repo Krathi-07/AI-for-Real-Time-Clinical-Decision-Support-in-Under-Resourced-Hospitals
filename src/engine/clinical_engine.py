@@ -1,7 +1,8 @@
 ﻿from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
+
 from src.models.early_warning import ClinicalPrediction, EarlyWarningSepsis
 from src.nlp.note_parser import ClinicalNoteParser, ClinicalNoteParseResult
 
@@ -25,8 +26,8 @@ class PatientSnapshot:
     encounter_id: str = ""
     fhir_features: dict = field(default_factory=dict)
     note_text: str = ""
-    early_warning: Optional[ClinicalPrediction] = None
-    nlp_result: Optional[ClinicalNoteParseResult] = None
+    early_warning: ClinicalPrediction | None = None
+    nlp_result: ClinicalNoteParseResult | None = None
     fused_risk_level: str = "UNKNOWN"
     fused_risk_score: float = 0.0
     fused_confidence: str = "low"
