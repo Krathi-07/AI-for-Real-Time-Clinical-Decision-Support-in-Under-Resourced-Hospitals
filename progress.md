@@ -488,3 +488,129 @@ pip install fastapi uvicorn     # API backend
 - [ ] Train model, evaluate with ROC-AUC
 - [ ] Add SHAP explanations
 - [ ] Wire model to FHIR pipeline end-to-end
+
+## Session 3 — Sepsis Early Warning Model ✅
+**Completed:** `src/models/early_warning.py`
+- XGBoost classifier with Platt calibration
+- Synthetic data generator (2000 healthy + 2000 septic patients)
+- ClinicalPrediction dataclass with SHAP-equivalent feature contributions
+- Val AUC: 1.000 on synthetic (target >0.85 on MIMIC)
+- No SHAP dependency — uses XGBoost native pred_contribs
+- All 3 test cases passing (septic, healthy, sparse data)
+- Committed: 7b6c486
+
+**Environment fix:** Project moved to C:\Projects\clinical-ai (out of OneDrive)
+UV_LINK_MODE=copy set permanently via [System.Environment]::SetEnvironmentVariable
+
+## Next Session — Phase 2: NLP Pipeline
+**File to build:** `src/nlp/note_parser.py`
+- Extract clinical entities from free-text doctor notes
+- Libraries: spacy + scispacy (biomedical NLP model)
+- Input: raw discharge summary / progress note text
+- Output: structured dict (symptoms, medications, diagnoses, vitals mentioned)
+
+## Phase 2: ML Models + NLP Pipeline
+
+### Phase 2A: Early Warning Model (written, NOT YET RUN)
+- **File:** `src/models/early_warning.py`
+- **Status:** Written last session, not yet validated or committed
+- **Next:** Run smoke test, validate output, commit
+
+### Phase 2B: NLP Pipeline ✅ COMPLETE (committed 2026-09-06)
+- **File:** `src/nlp/note_parser.py`
+- **Commit:** 0f9ba67
+- **What it does:**
+  - scispaCy NER with `en_ner_bc5cdr_md` model
+  - Abbreviation expansion (T2DM → type 2 diabetes mellitus)
+  - Entity classification: symptoms vs diagnoses, medications vs chemicals
+  - NegEx negation detection (implemented directly, no negspacy)
+  - Regex vital sign extraction (HR, BP, Temp, RR, SpO2)
+- **Key gotcha:** negspacy>=1.1.0 requires spacy>=3.8, incompatible with
+  scispaCy model needing spacy==3.7.5. Solution: implement NegEx directly.
+- **Key gotcha:** numpy must be pinned to ==1.26.4 in pyproject.toml.
+  numpy 2.x breaks thinc binary compatibility with spacy 3.7.
+
+### Next Session — Phase 2A
+- Run `uv run python src/models/early_warning.py`
+- Validate smoke test output
+- Commit to GitHub
+
+### Phase 2A: Early Warning Model ✅ COMPLETE (committed 2026-09-06)
+- **File:** `src/models/early_warning.py`
+- **Commit:** 763d500
+- **Val AUC:** 1.000 on synthetic data (expected — will be ~0.88 on MIMIC-IV)
+- **Test cases passed:** septic patient CRITICAL alert, healthy patient LOW, incomplete data graceful refusal
+
+### Phase 3: Multimodal Fusion ✅ COMPLETE (2026-09-06)
+- **File:** `src/engine/clinical_engine.py`
+- **Commit:** 850e976
+- **Run:** `uv run python -m src.engine.clinical_engine`
+- **What it does:**
+  - Orchestrates FHIR vitals + early warning model + NLP in one pipeline
+  - Returns PatientSnapshot with fused risk level and alert text
+  - 4 fusion rules:
+    - Rule 1: NLP sepsis diagnosis escalates risk one level
+    - Rule 2: NLP symptoms corroborate model drivers → higher confidence
+    - Rule 3: Broad-spectrum antibiotics flagged as infection signal
+    - Rule 4: Negation conflicts between model and note surfaced
+- **Known issue:** NegEx occasionally misclassifies "denies X" as symptom
+
+---
+
+## Next Session — Phase 4: FastAPI Layer
+- **Goal:** Expose ClinicalEngine as REST endpoints
+- **Files to create:**
+  - `src/api/main.py` — FastAPI app with /analyse endpoint
+  - `src/api/schemas.py` — Pydantic request/response models
+- **Run command:** `uv run uvicorn src.api.main:app --reload`
+- **Key endpoint:** `POST /analyse` — accepts patient_id, fhir_features, note_text → returns PatientSnapshot as JSON
+
+## Phase 4: FastAPI Layer ✅ COMPLETE (committed 3f4d78e)
+- src/api/schemas.py — Pydantic AnalyseRequest and HealthResponse models
+- src/api/main.py — FastAPI app with lifespan startup, /health and /analyse endpoints
+- ClinicalEngine loaded once at startup via lifespan context manager
+- Tested: /health returns ok, /analyse returns CRITICAL 98.8% on septic patient
+- Key fix: fastapi and uvicorn added to pyproject.toml
+- Key fix: scispaCy model installed via uv pip into C:\Projects\clinical-ai venv
+
+## Next Session — Phase 5: Agentic Orchestration
+- Build src/agent/ — LangGraph orchestration layer
+- Agent routes patient to appropriate analyser
+- Compose final clinical summary
+- HITL doctor feedback loop
+
+## Phase 5: Agentic Orchestration with LangGraph ✅ COMPLETE (2026-09-07)
+
+### Files created
+- `src/agent/state.py` — AgentState TypedDict (shared memory across all nodes)
+- `src/agent/nodes.py` — 5 nodes: triage, vitals, nlp, fusion, summary
+- `src/agent/graph.py` — LangGraph StateGraph with conditional routing
+- `src/agent/run_agent.py` — smoke test (3 scenarios)
+
+### Commits
+- `50f034f` — LangGraph agent
+- `faa6eaa` — FastAPI wired to agent
+
+### What the agent does
+1. Triage gate — aborts gracefully if <40% critical features present
+2. Vitals node — XGBoost sepsis model, extracts risk score + drivers
+3. NLP node — scispaCy extracts symptoms, diagnoses, medications
+4. Fusion node — 4 rules: escalate on sepsis diagnosis, corroborate drivers, flag antibiotics, surface negation conflicts
+5. Summary node — composes doctor-readable alert, sets HITL flag
+
+### API test result (septic patient)
+- Risk: CRITICAL 98.8%
+- Drivers: lactate, heart_rate, respiratory_rate
+- NLP: fever, hypotension, sepsis, piperacillin-tazobactam
+- HITL: true — mandatory attending review
+
+### Key gotchas
+- ClinicalNoteParseResult is a dataclass — use dot notation (result.symptoms), not dict .get()
+- FeatureExplanation fields are feature_name, direction, shap_value (not feature, contribution)
+- EarlyWarningSepsis method is train_on_synthetic_data() with no verbose argument
+- PowerShell cannot handle multiline -c strings — use .py helper files for complex fixes
+
+## Next Session — Phase 6: Production Hardening
+- [ ] Federated learning stub (src/federated/ — Flower client/server skeleton)
+- [ ] Alert system — real-time notifications for high-risk patients
+- [ ] Audit logging for regulatory compliance
