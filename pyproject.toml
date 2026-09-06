@@ -4,4 +4,10 @@ version = "0.1.0"
 description = "Virtual junior doctor AI for under-resourced hospitals"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "numpy==1.26.4",
+    "scikit-learn>=1.9.0",
+    "scispacy>=0.2.4",
+    "spacy==3.7.5",
+    "xgboost>=3.4.1",
+]
