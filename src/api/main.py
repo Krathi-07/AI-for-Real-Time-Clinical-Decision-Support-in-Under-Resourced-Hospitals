@@ -48,6 +48,13 @@ def health_check():
     )
 
 
+@app.get("/audit")
+def get_audit_log(request: Request, n: int = 20):
+    """Return last N audit records for compliance review."""
+    records = request.app.state.audit_logger.tail(n)
+    return {"count": len(records), "records": records}
+
+
 @app.post("/analyse")
 def analyse_patient(req: AnalyseRequest, request: Request):
     if not getattr(app.state, "agent_ready", False):
