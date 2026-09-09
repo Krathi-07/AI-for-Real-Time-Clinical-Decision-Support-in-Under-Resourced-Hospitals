@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from src.agent.graph import build_graph
 from src.agent.state import AgentState
+from src.alerts.alert_manager import AlertManager, FileAlertChannel
 from src.api.schemas import AnalyseRequest, HealthResponse
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -19,6 +20,9 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Starting up - compiling LangGraph clinical agent...")
     app.state.agent = build_graph()
+    alert_manager = AlertManager()
+    alert_manager.add_channel(FileAlertChannel("logs/clinical_alerts.jsonl"))
+    app.state.alert_manager = alert_manager
     app.state.agent_ready = True
     logger.info("Clinical agent ready. Server accepting requests.")
     yield
