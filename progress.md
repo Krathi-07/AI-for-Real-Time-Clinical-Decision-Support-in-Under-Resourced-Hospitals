@@ -637,3 +637,108 @@ UV_LINK_MODE=copy set permanently via [System.Environment]::SetEnvironmentVariab
 - [ ] Alert system — real-time notifications for CRITICAL patients
 - [ ] Audit logging — write to append-only file for DISHA compliance
 - [ ] Push to GitHub, update PROGRESS.md
+
+## Phase 6: Alert System + Audit Logging COMPLETE (committed 939ca16)
+
+### Alert System
+- src/alerts/alert_manager.py - AlertManager, FileAlertChannel, WebhookChannel, dedup
+- Alerts fire only on HIGH/CRITICAL predictions
+- Output: logs/clinical_alerts.jsonl (one record per alert)
+- Deduplication prevents repeat alerts for same patient
+
+### Audit Logging
+- src/audit/audit_logger.py - append-only JSONL audit trail (DISHA/HIPAA)
+- Thread-safe writes using threading.Lock
+- Every /analyse call logged regardless of risk level
+- Fields: timestamp, patient_id, risk_level, risk_score, model_version,
+  top_drivers, data_completeness, hitl_required, nlp_summary, source
+- Output: logs/audit_trail.jsonl
+
+### Wiring into FastAPI
+- src/api/main.py patched:
+  - AuditLogger initialized in lifespan startup
+  - AlertManager initialized in lifespan startup
+  - audit_logger.log() called after every /analyse prediction
+  - alert_manager.process() called for HIGH/CRITICAL only
+  - GET /audit endpoint returns last N records for compliance review
+
+### End-to-End Live Test Result
+- Patient: audit-test-001 (septic)
+- Risk: CRITICAL 98.8%
+- Drivers: lactate, heart_rate, respiratory_rate
+- NLP: fever, hypotension, confusion, sepsis
+- HITL: True - mandatory attending review
+- audit_trail.jsonl: written OK
+- clinical_alerts.jsonl: written OK
+
+### Key gotchas
+- FastAPI endpoint needs both 
+eq: AnalyseRequest AND 
+equest: Request
+  as separate parameters - AnalyseRequest has no .app attribute
+- PowerShell corrupts JS template literals () - always use Python
+  scripts to write HTML/JS files
+- AlertManager.process() takes snapshot directly, no AlertEvent wrapper needed
+- StaticFiles and FileResponse must be imported from fastapi.staticfiles
+  and fastapi.responses separately
+
+### Commits
+- 939ca16 - Phase 6: audit logging + alert wiring complete
+- 3483e4 - Phase 7: GET /audit endpoint
+
+---
+
+## Bonus: Live Dashboard (committed e5cd041)
+
+### File
+- src/dashboard/index.html - dark UI, pure HTML/JS, no framework
+
+### Features
+- Auto-refreshes every 10 seconds via fetch('/audit?n=50')
+- Stats row: total predictions, critical count, high count, HITL required
+- Table: time, patient ID, risk badge (color-coded), score, top drivers,
+  NLP findings, data completeness, HITL flag
+- Served at http://localhost:8000/dashboard via FastAPI StaticFiles
+
+### Verified
+- CRITICAL 98.8% record rendered correctly
+- All columns populated
+- Auto-refresh working (Last refresh timestamp updating)
+
+---
+
+## PROJECT COMPLETE
+
+### All 6 Phases Done
+
+| Phase | Component | Commit |
+|---|---|---|
+| 0 | Environment + repo | initial |
+| 1 | FHIR data layer | 591 lines |
+| 2A | XGBoost early warning | 763d500 |
+| 2B | scispaCy NLP pipeline | 0f9ba67 |
+| 3 | Multimodal fusion engine | 850e976 |
+| 4 | FastAPI REST layer | 3f4d78e |
+| 5 | LangGraph agentic orchestration | 50f034f |
+| 6 | Federated learning (Flower, 3 hospitals, AUC 0.965) | 0c9fba9 |
+| 6 | Alert system (FileChannel, WebhookChannel, dedup) | 61cd7c3 |
+| 6 | Audit logging (DISHA/HIPAA, append-only JSONL) | 939ca16 |
+| + | /audit endpoint + live dashboard | e5cd041 |
+
+### What the system does end-to-end
+1. Hospital sends patient vitals + clinical note to POST /analyse
+2. LangGraph agent runs triage gate (completeness check)
+3. XGBoost scores sepsis risk with SHAP feature drivers
+4. scispaCy extracts symptoms, diagnoses, medications from note
+5. Fusion engine applies 4 rules (escalate, corroborate, antibiotics, negation)
+6. Response returned: risk level, score, alert text, HITL flag
+7. Every prediction appended to audit_trail.jsonl (DISHA compliance)
+8. HIGH/CRITICAL predictions fire to clinical_alerts.jsonl
+9. Live dashboard at /dashboard shows all predictions in real time
+10. Federated learning trains across 3 hospitals without sharing patient data
+
+### Pending (optional, does not block system)
+- MIMIC-IV real data training (requires PhysioNet credentialing, ~2-5 days)
+  Target: replace synthetic AUC 1.000 with real AUC ~0.88
+  Start at: https://physionet.org/settings/credentialing/
+- Docker containerization for hospital deployment
