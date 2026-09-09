@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clinical AI Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; padding: 24px; }
+  h1 { color: #fff; font-size: 1.4rem; margin-bottom: 4px; }
+  .subtitle { color: #888; font-size: 0.85rem; margin-bottom: 24px; }
+  .stats { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .stat-card { background: #1a1d27; border-radius: 8px; padding: 16px 24px; min-width: 140px; }
+  .stat-card .label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  .stat-card .value { font-size: 2rem; font-weight: bold; margin-top: 4px; }
+  .critical { color: #ff4d4d; }
+  .high { color: #ff9500; }
+  .low { color: #34c759; }
+  table { width: 100%; border-collapse: collapse; background: #1a1d27; border-radius: 8px; overflow: hidden; }
+  th { background: #22263a; color: #aaa; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; padding: 12px 16px; text-align: left; }
+  td { padding: 12px 16px; border-top: 1px solid #2a2d3a; font-size: 0.85rem; vertical-align: top; }
+  tr:hover td { background: #1e2135; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+  .badge.CRITICAL { background: #3d0000; color: #ff4d4d; border: 1px solid #ff4d4d; }
+  .badge.HIGH { background: #3d2000; color: #ff9500; border: 1px solid #ff9500; }
+  .badge.LOW { background: #003d10; color: #34c759; border: 1px solid #34c759; }
+  .badge.MEDIUM { background: #3d3000; color: #ffd60a; border: 1px solid #ffd60a; }
+  .hitl { color: #ff9500; font-size: 0.75rem; }
+  .drivers { color: #aaa; font-size: 0.8rem; }
+  .refresh { float: right; font-size: 0.75rem; color: #555; margin-top: 6px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #34c759; margin-right: 6px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .empty { text-align: center; color: #555; padding: 48px; }
+</style>
+</head>
+<body>
+<h1><span class="dot"></span>AI Clinical Decision Support &mdash; Live Dashboard</h1>
+<p class="subtitle">Virtual Junior Doctor &middot; Under-Resourced Hospitals &middot; Auto-refreshes every 10s
+  <span class="refresh" id="last-refresh">&mdash;</span>
+</p>
+<div class="stats">
+  <div class="stat-card"><div class="label">Total Predictions</div><div class="value" id="stat-total">&mdash;</div></div>
+  <div class="stat-card"><div class="label">Critical</div><div class="value critical" id="stat-critical">&mdash;</div></div>
+  <div class="stat-card"><div class="label">High</div><div class="value high" id="stat-high">&mdash;</div></div>
+  <div class="stat-card"><div class="label">HITL Required</div><div class="value" style="color:#ff9500" id="stat-hitl">&mdash;</div></div>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th>Time (UTC)</th><th>Patient ID</th><th>Risk</th><th>Score</th>
+      <th>Top Drivers</th><th>NLP Findings</th><th>Completeness</th><th>HITL</th>
+    </tr>
+  </thead>
+  <tbody id="table-body">
+    <tr><td colspan="8" class="empty">Loading...</td></tr>
+  </tbody>
+</table>
+<script>
+async function fetchAudit() {
+  try {
+    const res = await fetch('/audit?n=50');
+    const data = await res.json();
+    return data.records || [];
+  } catch(e) { return []; }
+}
+
+function fmt(ts) { return ts ? ts.replace('T',' ').substring(0,19) : '-'; }
+
+function renderTable(records) {
+  const tbody = document.getElementById('table-body');
+  if (!records.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">No predictions yet.</td></tr>';
+    return;
+  }
+  document.getElementById('stat-total').textContent = records.length;
+  document.getElementById('stat-critical').textContent = records.filter(function(r){return r.risk_level==='CRITICAL';}).length;
+  document.getElementById('stat-high').textContent = records.filter(function(r){return r.risk_level==='HIGH';}).length;
+  document.getElementById('stat-hitl').textContent = records.filter(function(r){return r.hitl_required;}).length;
+
+  var rows = records.slice().reverse().map(function(r) {
+    var nlp = r.nlp_summary || {};
+    var symptoms = (nlp.symptoms||[]).join(', ') || '-';
+    var diagnoses = (nlp.diagnoses||[]).join(', ') || '';
+    var drivers = (r.top_drivers||[]).join(', ') || '-';
+    var score = r.risk_score ? (r.risk_score*100).toFixed(1)+'%' : '-';
+    var comp = r.data_completeness ? (r.data_completeness*100).toFixed(0)+'%' : '-';
+    var hitl = r.hitl_required ? '<span class="hitl">&#9888; Required</span>' : '<span style="color:#555">No</span>';
+    var badge = r.risk_level || 'UNKNOWN';
+    var nlpText = symptoms + (diagnoses ? ' &middot; <em>' + diagnoses + '</em>' : '');
+    return '<tr>'
+      + '<td>' + fmt(r.timestamp) + '</td>'
+      + '<td>' + (r.patient_id||'-') + '</td>'
+      + '<td><span class="badge ' + badge + '">' + badge + '</span></td>'
+      + '<td>' + score + '</td>'
+      + '<td class="drivers">' + drivers + '</td>'
+      + '<td class="drivers">' + nlpText + '</td>'
+      + '<td>' + comp + '</td>'
+      + '<td>' + hitl + '</td>'
+      + '</tr>';
+  }).join('');
+  tbody.innerHTML = rows;
+}
+
+async function refresh() {
+  var records = await fetchAudit();
+  renderTable(records);
+  document.getElementById('last-refresh').textContent = 'Last refresh: ' + new Date().toLocaleTimeString();
+}
+refresh();
+setInterval(refresh, 10000);
+</script>
+</body>
+</html>

@@ -5,7 +5,8 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from src.agent.graph import build_graph
 from src.agent.state import AgentState
@@ -37,6 +38,13 @@ app = FastAPI(
     version="0.2.0",
     lifespan=lifespan,
 )
+
+
+app.mount("/static", StaticFiles(directory="src/dashboard"), name="static")
+
+@app.get("/dashboard", include_in_schema=False)
+def dashboard():
+    return FileResponse("src/dashboard/index.html")
 
 
 @app.get("/health", response_model=HealthResponse)
