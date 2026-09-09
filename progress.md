@@ -614,3 +614,26 @@ UV_LINK_MODE=copy set permanently via [System.Environment]::SetEnvironmentVariab
 - [ ] Federated learning stub (src/federated/ — Flower client/server skeleton)
 - [ ] Alert system — real-time notifications for high-risk patients
 - [ ] Audit logging for regulatory compliance
+
+## Phase 6: Federated Learning ✅ COMPLETE (committed 0c9fba9)
+
+### Files created
+- `src/federated/fl_client.py` — SepsisFlowerClient wrapping EarlyWarningSepsis, non-IID synthetic data per hospital
+- `src/federated/fl_server.py` — FedAvg strategy, weighted AUC aggregation, audit log stub
+- `src/federated/run_simulation.py` — 3-hospital in-process simulation via Ray
+
+### Result
+- 3 rounds, 0 failures, weighted AUC 0.965 across 3000 samples
+- Audit events logged per round (DISHA compliance stub)
+
+### Key gotchas
+- EarlyWarningSepsis attributes are `_xgb` (model) and `_is_trained` (flag), not `model`/`is_trained`
+- flwr[simulation] requires Ray — install with `uv add "flwr[simulation]"`
+- Flower's client_fn now expects `context: Context`, not `cid: str`
+- Synthetic data must match model's n_features (12, not 13)
+- losses_distributed is a list of (round, loss) tuples, not a dict
+
+### Next Session — Phase 6 continued / Phase 7
+- [ ] Alert system — real-time notifications for CRITICAL patients
+- [ ] Audit logging — write to append-only file for DISHA compliance
+- [ ] Push to GitHub, update PROGRESS.md

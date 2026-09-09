@@ -4,12 +4,13 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from src.agent.graph import build_graph
 from src.agent.state import AgentState
 from src.alerts.alert_manager import AlertManager, FileAlertChannel
+from src.audit.audit_logger import AuditLogger
 from src.api.schemas import AnalyseRequest, HealthResponse
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -23,6 +24,7 @@ async def lifespan(app: FastAPI):
     alert_manager = AlertManager()
     alert_manager.add_channel(FileAlertChannel("logs/clinical_alerts.jsonl"))
     app.state.alert_manager = alert_manager
+    app.state.audit_logger = AuditLogger("logs/audit_trail.jsonl")
     app.state.agent_ready = True
     logger.info("Clinical agent ready. Server accepting requests.")
     yield
@@ -47,20 +49,20 @@ def health_check():
 
 
 @app.post("/analyse")
-def analyse_patient(request: AnalyseRequest):
+def analyse_patient(req: AnalyseRequest, request: Request):
     if not getattr(app.state, "agent_ready", False):
         raise HTTPException(status_code=503, detail="Agent not ready. Try again in a few seconds.")
 
-    if not request.fhir_features and not request.note_text.strip():
+    if not req.fhir_features and not req.note_text.strip():
         raise HTTPException(
             status_code=422,
             detail="At least one of fhir_features or note_text must be provided.",
         )
 
     initial_state: AgentState = {
-        "patient_id": request.patient_id,
-        "fhir_features": request.fhir_features or {},
-        "note_text": request.note_text or "",
+        "patient_id": req.patient_id,
+        "fhir_features": req.fhir_features or {},
+        "note_text": req.note_text or "",
         "reasoning_trace": [],
         "data_sufficient": False,
         "completeness_score": 0.0,
@@ -80,6 +82,30 @@ def analyse_patient(request: AnalyseRequest):
 
     try:
         result = app.state.agent.invoke(initial_state)
+
+        # --- Audit log (every prediction, not just alerts) ---
+        from types import SimpleNamespace
+        _nlp = SimpleNamespace(
+            symptoms=result["nlp_symptoms"],
+            diagnoses=result["nlp_diagnoses"],
+            negated_findings=[],
+        )
+        _snap = SimpleNamespace(
+            patient_id=result["patient_id"],
+            risk_level=result["fused_risk_level"],
+            risk_score=result["model_risk_score"],
+            model_version="0.6.0",
+            top_drivers=result["model_drivers"],
+            data_completeness=result["completeness_score"],
+            hitl_required=result["requires_human_review"],
+            fusion_rules_fired=[],
+            nlp_findings=_nlp,
+        )
+        request.app.state.audit_logger.log(_snap, source="api:/analyse")
+
+        # --- Alert manager (HIGH / CRITICAL only) ---
+        if result["fused_risk_level"] in ("HIGH", "CRITICAL"):
+            request.app.state.alert_manager.process(_snap)
 
         return JSONResponse(content={
             "patient_id": result["patient_id"],
