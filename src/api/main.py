@@ -5,14 +5,14 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.agent.graph import build_graph
 from src.agent.state import AgentState
 from src.alerts.alert_manager import AlertManager, FileAlertChannel
-from src.audit.audit_logger import AuditLogger
 from src.api.schemas import AnalyseRequest, HealthResponse
+from src.audit.audit_logger import AuditLogger
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)

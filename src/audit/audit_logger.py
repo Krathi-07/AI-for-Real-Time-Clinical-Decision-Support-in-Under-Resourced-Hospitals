@@ -29,7 +29,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -107,7 +107,7 @@ class AuditLogger:
             }
 
         return {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "patient_id": getattr(snapshot, "patient_id", "unknown"),
             "risk_level": getattr(snapshot, "risk_level", "UNKNOWN"),
             "risk_score": round(float(getattr(snapshot, "risk_score", 0.0)), 4),

@@ -2,8 +2,6 @@
 # Start the full stack with: docker compose up --build
 # Stop with: docker compose down
 
-version: "3.9"
-
 services:
 
   # ─────────────────────────────────────────────
@@ -52,4 +50,3 @@ services:
       api:
         condition: service_healthy  # wait for API to pass healthcheck first
     restart: "no"                   # FL sim runs once and exits — don't restart it
-    

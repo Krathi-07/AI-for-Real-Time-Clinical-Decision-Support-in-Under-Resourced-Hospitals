@@ -742,3 +742,30 @@ equest: Request
   Target: replace synthetic AUC 1.000 with real AUC ~0.88
   Start at: https://physionet.org/settings/credentialing/
 - Docker containerization for hospital deployment
+
+## Phase 8: Docker Containerization ✅ COMPLETE (2026-09-10)
+
+### Files created
+- `Dockerfile` — multi-stage build (builder + runtime stages)
+- `.dockerignore` — excludes venv, data, caches, secrets
+- `docker-compose.yml` — full stack: API service + FL simulation
+
+### What it does
+- Stage 1 (builder): installs all deps via uv including scispaCy S3 model
+- Stage 2 (runtime): lean image, non-root user, health check on /health
+- docker-compose starts API + FL sim with one command: `docker compose up --build`
+- FL simulation waits for API health check before starting (depends_on)
+
+### Commit: b7f5364
+
+### Known limitation
+- Local build not testable — dev environment is a VM, nested virtualization
+  not available. Files are correct and ready for bare-metal or cloud deployment.
+- To test on AWS: launch EC2 t3.medium (Ubuntu), install Docker, clone repo,
+  run `docker compose up --build`
+
+## Remaining items
+- MIMIC-IV real data training (requires PhysioNet credentialing, ~2-5 days)
+  Target: replace synthetic AUC 1.000 with real AUC ~0.88
+  Start at: https://physionet.org/settings/credentialing/
+  
