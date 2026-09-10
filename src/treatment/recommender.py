@@ -112,11 +112,20 @@ class TreatmentRecommender:
             elif isinstance(d, str):
                 driver_names.append(d)
 
+        allowed_priorities = {
+            "CRITICAL": {"IMMEDIATE", "URGENT", "ROUTINE"},
+            "HIGH":     {"IMMEDIATE", "URGENT", "ROUTINE"},
+            "MEDIUM":   {"URGENT", "ROUTINE"},
+            "LOW":      {"ROUTINE"},
+        }.get(level, {"ROUTINE"})
+
         seen = set()
         for driver in driver_names:
             if driver in DRIVER_ACTIONS and driver not in seen:
                 seen.add(driver)
                 action = DRIVER_ACTIONS[driver]
+                if action.priority not in allowed_priorities:
+                    continue
                 if action.priority == "IMMEDIATE":
                     immediate.append(action)
                 elif action.priority == "URGENT":
@@ -129,6 +138,8 @@ class TreatmentRecommender:
             for key, action in NLP_ACTIONS.items():
                 if key in term and key not in seen:
                     seen.add(key)
+                    if action.priority not in allowed_priorities:
+                        continue
                     if action.priority == "IMMEDIATE":
                         immediate.append(action)
                     elif action.priority == "URGENT":
