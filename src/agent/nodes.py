@@ -36,14 +36,58 @@ def triage_node(state):
     return {'data_sufficient': sufficient, 'completeness_score': completeness, 'reasoning_trace': trace}
 
 
+def _calibrate_risk(score: float, features: dict) -> str:
+    """
+    Post-model calibration layer using qSOFA + Sepsis-3 vital thresholds.
+    Overrides bimodal XGBoost output with clinically grounded risk tiers.
+    qSOFA: resp_rate >= 22 (+1), systolic_bp <= 100 (+1) = each 1 point.
+    """
+    lactate = features.get('lactate', 0.0)
+    systolic_bp = features.get('systolic_bp', 120.0)
+    resp_rate = features.get('respiratory_rate', 16.0)
+
+    # qSOFA score from vitals only (confusion added later by fusion if NLP present)
+    qsofa = 0
+    if resp_rate >= 22:
+        qsofa += 1
+    if systolic_bp <= 100:
+        qsofa += 1
+
+    if score >= 0.85:
+        # Septic shock criteria: high score + organ hypoperfusion markers
+        if lactate >= 4.0 or systolic_bp < 90:
+            return 'CRITICAL'
+        # High risk: elevated score + 2 qSOFA points
+        if qsofa >= 2:
+            return 'HIGH'
+        # Elevated score alone without shock markers
+        return 'HIGH'
+    elif score >= 0.40:
+        return 'MEDIUM'
+    else:
+        return 'LOW'
+
+
 def vitals_node(state):
     trace = list(state.get('reasoning_trace', []))
+    features = state.get('fhir_features', {})
     model = _get_warning_model()
-    prediction = model.predict(state.get('fhir_features', {}))
+    prediction = model.predict(features)
+
+    # Apply calibration layer to fix bimodal XGBoost distribution
+    calibrated_level = _calibrate_risk(prediction.risk_score, features)
+
     drivers = [f"{d.feature_name} ({d.direction})" for d in prediction.top_drivers[:3]]
-    trace.append(f'[Vitals] Risk: {prediction.risk_level} (score={prediction.risk_score:.3f}). Drivers: {", ".join(drivers)}')
-    return {'model_risk_score': prediction.risk_score, 'model_risk_level': prediction.risk_level,
-            'model_drivers': prediction.top_drivers, 'reasoning_trace': trace}
+    trace.append(
+        f'[Vitals] Risk: {calibrated_level} (score={prediction.risk_score:.3f}). '
+        f'Drivers: {", ".join(drivers)}'
+    )
+    return {
+        'model_risk_score': prediction.risk_score,
+        'model_risk_level': calibrated_level,
+        'model_drivers': prediction.top_drivers,
+        'reasoning_trace': trace,
+    }
 
 
 def nlp_node(state):

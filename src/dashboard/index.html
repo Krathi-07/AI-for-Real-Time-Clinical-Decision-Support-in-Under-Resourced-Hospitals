@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Clinical Decision Support | Virtual Junior Doctor</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -13,9 +14,42 @@
   --blue: #3b82f6; --purple: #8b5cf6; --cyan: #06b6d4;
   --yellow: #fbbf24;
 }
+body.theme-light {
+  --bg: #f0f4f8; --card: #ffffff; --card2: #e8edf2;
+  --border: #cbd5e1; --text: #0f172a; --muted: #64748b;
+  --red: #dc2626; --orange: #ea580c; --green: #16a34a;
+  --blue: #2563eb; --purple: #7c3aed; --cyan: #0891b2;
+  --yellow: #d97706;
+}
+body.theme-hc {
+  --bg: #000000; --card: #0a0a0a; --card2: #111111;
+  --border: #ffffff; --text: #ffffff; --muted: #cccccc;
+  --red: #ff4444; --orange: #ff8800; --green: #00ff88;
+  --blue: #4499ff; --purple: #bb88ff; --cyan: #00ddff;
+  --yellow: #ffdd00;
+}
+.tooltip-wrap { position: relative; display: inline-block; cursor: help; }
+.tooltip-wrap .tt {
+  visibility: hidden; opacity: 0; background: var(--card);
+  color: #e2e8f0; font-size: 0.75rem; line-height: 1.5;
+  border: 1px solid var(--cyan); border-radius: 8px;
+  padding: 8px 12px; position: absolute; z-index: 999;
+  bottom: 130%; left: 50%; transform: translateX(-50%);
+  width: 220px; transition: opacity 0.2s; pointer-events: none;
+  font-weight: 400; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.tooltip-wrap:hover .tt { visibility: visible; opacity: 1; }
+.tt-icon { color: var(--cyan); font-size: 0.7rem; margin-left: 3px; vertical-align: super; }
+.theme-btn {
+  background: var(--card); border: 1px solid var(--border);
+  color: var(--muted); padding: 5px 12px; border-radius: 6px;
+  font-size: 0.78rem; cursor: pointer; transition: all 0.2s;
+  font-family: "DM Sans", sans-serif;
+}
+.theme-btn:hover { border-color: var(--cyan); color: var(--cyan); }
 html { scroll-behavior: smooth; }
-body { font-family: "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
-nav { position: fixed; top: 0; width: 100%; background: rgba(10,13,20,0.95);
+body { font-family: "DM Sans", "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+nav { position: fixed; top: 0; width: 100%; background: var(--bg);
   backdrop-filter: blur(10px); border-bottom: 1px solid var(--border);
   z-index: 100; padding: 0 40px; display: flex; align-items: center;
   justify-content: space-between; height: 56px; }
@@ -68,9 +102,9 @@ section { padding: 80px 40px; max-width: 1100px; margin: 0 auto; }
 .demo-input h3 { font-size: 0.9rem; color: var(--cyan); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
 .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
 .inp-group label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
-.inp-group input { width: 100%; background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: var(--text); font-size: 0.85rem; }
+.inp-group input { width: 100%; background: var(--card2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: var(--text); font-size: 0.85rem; }
 .inp-group input:focus { outline: none; border-color: var(--cyan); }
-.inp-group textarea { width: 100%; background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: var(--text); font-size: 0.85rem; resize: vertical; min-height: 80px; }
+.inp-group textarea { width: 100%; background: var(--card2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: var(--text); font-size: 0.85rem; resize: vertical; min-height: 80px; }
 .inp-group textarea:focus { outline: none; border-color: var(--cyan); }
 .preset-btns { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
 .preset-btn { padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; border: 1px solid var(--border); background: var(--card2); color: var(--muted); transition: all 0.2s; }
@@ -80,7 +114,7 @@ section { padding: 80px 40px; max-width: 1100px; margin: 0 auto; }
 .pipeline { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
 .pipeline h3 { font-size: 0.9rem; color: var(--cyan); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
 .pipe-steps { display: flex; flex-direction: column; gap: 8px; }
-.pipe-step { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px; background: #0d1117; border: 1px solid var(--border); transition: all 0.3s; }
+.pipe-step { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px; background: var(--card2); border: 1px solid var(--border); transition: all 0.3s; }
 .pipe-step.active { border-color: var(--cyan); background: rgba(6,182,212,0.05); }
 .pipe-step.done { border-color: var(--green); background: rgba(34,197,94,0.05); }
 .pipe-step.error { border-color: var(--red); }
@@ -148,7 +182,7 @@ section { padding: 80px 40px; max-width: 1100px; margin: 0 auto; }
 /* AUDIT */
 .audit-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .audit-wrap table { width: 100%; border-collapse: collapse; }
-.audit-wrap th { background: #0d1117; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; padding: 12px 16px; text-align: left; }
+.audit-wrap th { background: var(--card2); color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; padding: 12px 16px; text-align: left; }
 .audit-wrap td { padding: 11px 16px; border-top: 1px solid var(--border); font-size: 0.82rem; }
 .audit-wrap tr:hover td { background: var(--card2); }
 .risk-badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; }
@@ -172,6 +206,9 @@ footer a { color: var(--cyan); text-decoration: none; }
 
 <nav>
   <div class="nav-logo"><span class="dot"></span>Clinical AI</div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button class="theme-btn" onclick="cycleTheme()" id="theme-btn">Light Mode</button>
+  </div>
   <div class="nav-links">
     <a href="#about">About</a>
     <a href="#demo">Live Demo</a>
@@ -211,7 +248,7 @@ footer a { color: var(--cyan); text-decoration: none; }
       <div class="layer">Layer 1</div>
       <h3>Data Ingestion</h3>
       <ul>
-        <li>FHIR R4 patient bundles</li>
+        <li><span class="tooltip-wrap">FHIR R4 patient bundles<span class="tt">FHIR (Fast Healthcare Interoperability Resources) is the global standard for exchanging patient data between hospital systems.</span></span></li>
         <li>LOINC-coded vitals and labs</li>
         <li>Clinical notes (free text)</li>
         <li>Completeness validation</li>
@@ -221,20 +258,20 @@ footer a { color: var(--cyan); text-decoration: none; }
       <div class="layer">Layer 2</div>
       <h3>AI Core</h3>
       <ul>
-        <li>XGBoost sepsis model + SHAP</li>
-        <li>scispaCy NLP (NER + negation)</li>
+        <li><span class="tooltip-wrap">XGBoost sepsis model + SHAP<span class="tt">XGBoost: a fast gradient-boosting ML model trained on patient vitals. SHAP explains which features drove each prediction.</span></span></li>
+        <li><span class="tooltip-wrap">scispaCy NLP (NER + negation)<span class="tt">NLP pipeline that reads clinical notes, extracts medical entities (symptoms, diagnoses, drugs) and detects negations like "no fever".</span></span></li>
         <li>Multimodal fusion engine</li>
-        <li>LangGraph agent orchestration</li>
+        <li><span class="tooltip-wrap">LangGraph agent orchestration<span class="tt">LangGraph chains AI steps (triage → model → NLP → fusion → treatment) into a traceable, auditable pipeline.</span></span></li>
       </ul>
     </div>
     <div class="arch-card">
       <div class="layer">Layer 3</div>
       <h3>Clinical Output</h3>
       <ul>
-        <li>Risk level + score + drivers</li>
+        <li><span class="tooltip-wrap">Risk level + score + drivers<span class="tt">Risk score (0-100%) from XGBoost. Drivers are the top SHAP features that pushed the score up or down.</span></span></li>
         <li>Treatment plan (immediate/urgent/routine)</li>
         <li>Escalation triggers</li>
-        <li>HITL mandatory review flag</li>
+        <li><span class="tooltip-wrap">HITL mandatory review flag<span class="tt">Human-In-The-Loop: for HIGH/CRITICAL patients, the system flags that a doctor must review before acting on AI output.</span></span></li>
       </ul>
     </div>
   </div>
@@ -244,10 +281,10 @@ footer a { color: var(--cyan); text-decoration: none; }
     <div class="tech-badge"><span>LangGraph</span> Agent Orchestration</div>
     <div class="tech-badge"><span>XGBoost</span> Sepsis Model</div>
     <div class="tech-badge"><span>scispaCy</span> Clinical NLP</div>
-    <div class="tech-badge"><span>Flower</span> Federated Learning</div>
-    <div class="tech-badge"><span>FHIR R4</span> Healthcare Standard</div>
-    <div class="tech-badge"><span>SHAP</span> Explainable AI</div>
-    <div class="tech-badge"><span>DISHA/HIPAA</span> Compliance</div>
+    <div class="tech-badge tooltip-wrap"><span>Flower</span> Federated Learning<span class="tt">Federated Learning trains a shared model across hospitals without sharing patient records. Only model weights are transmitted.</span></div>
+    <div class="tech-badge tooltip-wrap"><span>FHIR R4</span> Healthcare Standard<span class="tt">The international standard for health data exchange. Our system ingests LOINC-coded vitals and labs in FHIR Bundle format.</span></div>
+    <div class="tech-badge tooltip-wrap"><span>SHAP</span> Explainable AI<span class="tt">SHapley Additive exPlanations: shows which vital sign contributed most to the sepsis risk score for each patient.</span></div>
+    <div class="tech-badge tooltip-wrap"><span>DISHA/HIPAA</span> Compliance<span class="tt">DISHA: India's Digital Information Security in Healthcare Act. HIPAA: US equivalent. Both prohibit centralising patient data — hence Federated Learning.</span></div>
   </div>
 </section>
 
@@ -263,6 +300,7 @@ footer a { color: var(--cyan); text-decoration: none; }
       <button class="preset-btn" onclick="loadPreset('sepsis')">Critical Sepsis</button>
       <button class="preset-btn" onclick="loadPreset('high')">High Risk</button>
       <button class="preset-btn" onclick="loadPreset('low')">Low Risk (Stable)</button>
+      <button class="preset-btn" onclick="loadPreset('medium')">Medium Risk</button>
     </div>
   </div>
 
@@ -426,6 +464,12 @@ var PRESETS = {
     body_temperature:37.1, spo2:99, lactate:0.9, creatinine:0.9,
     wbc:7.2, hemoglobin:13.4, glucose:95, patient_id:"stable-demo-001",
     note_text:"Routine post-op check. Patient alert and oriented. No complaints."
+  },
+  medium: {
+    heart_rate:92, systolic_bp:108, diastolic_bp:68, respiratory_rate:18,
+    body_temperature:38.0, spo2:97, lactate:1.8, creatinine:1.1,
+    wbc:10.5, hemoglobin:12.1, glucose:105, patient_id:"medium-risk-demo-001",
+    note_text:"Patient with mild fever and fatigue. No confusion. Mild cough present."
   }
 };
 
@@ -531,6 +575,17 @@ async function runAnalysis() {
   btn.textContent = "Analyse Patient";
   spinner.classList.remove("active");
   loadAudit();
+}
+
+var THEMES = ['theme-dark', 'theme-light', 'theme-hc'];
+var THEME_LABELS = ['Light Mode', 'High Contrast', 'Dark Mode'];
+var currentTheme = 0;
+function cycleTheme() {
+  document.body.classList.remove('theme-light', 'theme-hc');
+  currentTheme = (currentTheme + 1) % 3;
+  if (currentTheme === 1) document.body.classList.add('theme-light');
+  if (currentTheme === 2) document.body.classList.add('theme-hc');
+  document.getElementById('theme-btn').textContent = THEME_LABELS[currentTheme];
 }
 
 function renderResults(data) {
