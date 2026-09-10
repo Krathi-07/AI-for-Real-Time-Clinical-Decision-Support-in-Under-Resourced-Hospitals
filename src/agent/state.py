@@ -34,3 +34,6 @@ class AgentState(TypedDict):
     # HITL flag
     requires_human_review: bool
     review_reason: str
+
+    # Treatment recommendations
+    treatment_plan: dict

@@ -5,6 +5,7 @@ from src.agent.nodes import (
     fusion_node,
     nlp_node,
     summary_node,
+    treatment_node,
     triage_node,
     vitals_node,
 )
@@ -31,6 +32,7 @@ def build_graph() -> StateGraph:
     graph.add_node("nlp_node", nlp_node)
     graph.add_node("fusion_node", fusion_node)
     graph.add_node("summary_node", summary_node)
+    graph.add_node("treatment_node", treatment_node)
 
     # Entry point
     graph.set_entry_point("triage_node")
@@ -48,7 +50,8 @@ def build_graph() -> StateGraph:
     # Linear path through the rest
     graph.add_edge("vitals_node", "nlp_node")
     graph.add_edge("nlp_node", "fusion_node")
-    graph.add_edge("fusion_node", "summary_node")
+    graph.add_edge("fusion_node", "treatment_node")
+    graph.add_edge("treatment_node", "summary_node")
     graph.add_edge("summary_node", END)
 
     return graph.compile()

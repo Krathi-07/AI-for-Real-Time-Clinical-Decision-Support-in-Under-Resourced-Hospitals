@@ -1,6 +1,10 @@
 # src/agent/nodes.py
+from src.agent.state import AgentState
 from src.models.early_warning import EarlyWarningSepsis
 from src.nlp.note_parser import ClinicalNoteParser
+from src.treatment.recommender import TreatmentRecommender
+
+_recommender = TreatmentRecommender()
 
 _warning_model = None
 _note_parser = None
@@ -144,3 +148,21 @@ def summary_node(state):
         'review_reason': review_reason,
         'reasoning_trace': trace,
     }
+
+
+def treatment_node(state: AgentState) -> AgentState:
+    """Generate evidence-based treatment recommendations."""
+    plan = _recommender.recommend(
+        risk_level=state["fused_risk_level"],
+        top_drivers=state["model_drivers"],
+        nlp_symptoms=state["nlp_symptoms"],
+        nlp_diagnoses=state["nlp_diagnoses"],
+    )
+    state["treatment_plan"] = plan.to_dict()
+    state["reasoning_trace"].append(
+        f"[Treatment] {len(plan.immediate_actions)} immediate, "
+        f"{len(plan.urgent_actions)} urgent, "
+        f"{len(plan.routine_actions)} routine actions. "
+        f"Reassess in {plan.reassess_in_minutes} min."
+    )
+    return state

@@ -93,6 +93,7 @@ def analyse_patient(req: AnalyseRequest, request: Request):
         "alert_text": "",
         "requires_human_review": False,
         "review_reason": "",
+        "treatment_plan": {},
     }
 
     try:
@@ -138,6 +139,7 @@ def analyse_patient(req: AnalyseRequest, request: Request):
             },
             "conflicts": result["conflicts"],
             "reasoning_trace": result["reasoning_trace"],
+            "treatment_plan": result.get("treatment_plan", {}),
         })
 
     except Exception as e:
