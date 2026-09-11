@@ -1,4 +1,4 @@
-# AI Clinical Decision Support — Project Progress
+﻿# AI Clinical Decision Support — Project Progress
 
 **Project:** Virtual Junior Doctor for Under-Resourced Hospitals
 **Goal:** Real-time AI that catches worsening patient conditions and suggests diagnoses
@@ -614,3 +614,62 @@ UV_LINK_MODE=copy set permanently via [System.Environment]::SetEnvironmentVariab
 - [ ] Federated learning stub (src/federated/ — Flower client/server skeleton)
 - [ ] Alert system — real-time notifications for high-risk patients
 - [ ] Audit logging for regulatory compliance
+
+[System.IO.File]::WriteAllText("C:\Projects\clinical-ai\PROGRESS.md", @'
+# PROGRESS.md — AI Clinical Decision Support
+
+## Project
+AI for Real-Time Clinical Decision Support in Under-Resourced Hospitals
+Virtual Junior Doctor — Sepsis Detection for Tier-2/3 Indian Hospitals
+GitHub: https://github.com/Krathi-07/AI-for-Real-Time-Clinical-Decision-Support-in-Under-Resourced-Hospitals
+
+## Status: COMPLETE — Presentation Ready
+
+## All Phases Done
+- Phase 0: Project setup, FHIR schema
+- Phase 1: FHIR R4 ingestion, feature builder
+- Phase 2: XGBoost sepsis model + SHAP explainability
+- Phase 3: scispaCy NLP (NER + negation detection)
+- Phase 4: Multimodal fusion engine
+- Phase 5: FastAPI + LangGraph agent orchestration
+- Phase 6: Federated learning (Flower), treatment engine, audit logging, alerts
+
+## Website Structure (all pages working)
+- /login        — Doctor login (doctor / clinical2026)
+- /about        — Landing page: project info, architecture, phases, tech stack
+- /demo         — Interactive live demo with 4 preset scenarios
+- /federated    — Federated learning explanation
+- /audit-page   — Live audit log table
+- /dashboard    — Original dashboard (backup)
+
+## Key Bugs Fixed This Session
+1. XGBoost SHAP: shap_values() returns single array in v2.x, not list
+2. pulse_pressure (12th feature) not computed in nodes.py — fixed
+3. CalibratedClassifierCV removed in new sklearn — replaced with direct XGBoost predict_proba
+4. scispaCy model en_ner_bc5cdr_md v0.5.4 installed for spaCy 3.7.5
+5. xgboost pinned to 2.1.1 (3.x removed XGBClassifier)
+6. Separate nav pages created (about, federated, audit-page, demo)
+7. Theme toggle (dark/light) on all pages, persists via localStorage
+
+## Credentials
+- Username: doctor
+- Password: clinical2026
+
+## Key Files
+- src/api/main.py           — FastAPI routes
+- src/models/early_warning.py — XGBoost model + SHAP
+- src/agent/nodes.py        — LangGraph nodes (pulse_pressure fix here)
+- src/dashboard/about.html  — Landing page after login
+- src/dashboard/demo.html   — Live demo
+- src/dashboard/federated.html
+- src/dashboard/audit_page.html
+
+## Start Server
+uv run uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+Then open: http://localhost:8000/login
+
+## Package Versions (pinned)
+- xgboost==2.1.1
+- spacy==3.7.5
+- en-ner-bc5cdr-md==0.5.4
+'@, [System.Text.UTF8Encoding]::new($false))
