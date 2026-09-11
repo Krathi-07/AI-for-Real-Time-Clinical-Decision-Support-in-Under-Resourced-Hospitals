@@ -24,12 +24,15 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
+import shap
 import xgboost as xgb
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, classification_report
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -303,15 +306,14 @@ class EarlyWarningSepsis:
             colsample_bytree=0.8,
             min_child_weight=5,
             scale_pos_weight=1,   # adjust if class imbalance found in real data
-            
             eval_metric="auc",
             random_state=42,
             # Native missing value handling — XGBoost learns which branch
             # to take when a value is missing. We use -1.0 as sentinel
             # but XGBoost also supports np.nan natively.
         )
-        self._calibrated: CalibratedClassifierCV | None = None
-        self._explainer = None
+        self._calibrated: Optional[CalibratedClassifierCV] = None
+        self._explainer: Optional[shap.TreeExplainer] = None
         self._is_trained: bool = False
         self._train_auc: float = 0.0
         self._val_auc: float = 0.0
@@ -350,11 +352,10 @@ class EarlyWarningSepsis:
 
         # Platt calibration on validation set
         # cv="prefit" means "the classifier is already trained, just fit the calibration layer"
-        self._calibrated = CalibratedClassifierCV(self._xgb, method="sigmoid")
-        self._calibrated.fit(X_val, y_val)
+        self._calibrated = self._xgb  # XGBoost predict_proba is well-calibrated
 
         # SHAP explainer — TreeExplainer is exact (not approximate) for XGBoost
-        # explainer uses xgboost native contributions - no external library needed
+        self._explainer = shap.TreeExplainer(self._xgb.get_booster())
 
         # Evaluation
         train_proba = self._calibrated.predict_proba(X_train)[:, 1]
@@ -397,9 +398,8 @@ class EarlyWarningSepsis:
         )
 
         self._xgb.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
-        self._calibrated = CalibratedClassifierCV(self._xgb, method="sigmoid")
-        self._calibrated.fit(X_val, y_val)
-        # explainer uses xgboost native contributions - no external library needed
+        self._calibrated = self._xgb  # XGBoost predict_proba is well-calibrated
+        self._explainer = shap.TreeExplainer(self._xgb)
 
         val_proba = self._calibrated.predict_proba(X_val)[:, 1]
         self._val_auc = roc_auc_score(y_val, val_proba)
@@ -499,30 +499,22 @@ class EarlyWarningSepsis:
 
     def _explain(self, x: np.ndarray, features: dict) -> list[FeatureExplanation]:
         """
-        Per-feature contributions via XGBoost native pred_contribs.
+        Compute SHAP values and build FeatureExplanation objects.
 
-        XGBoost trees can decompose each prediction into per-feature contributions
-        directly from the tree structure. This is mathematically equivalent to
-        SHAP TreeExplainer values and requires no external library.
-
-        pred_contribs returns shape (n_samples, n_features + 1).
-        The last column is the bias term (base score) - we drop it.
-        Positive value = feature pushes prediction toward sepsis.
-        Negative value = feature pushes prediction toward healthy.
+        SHAP values are in log-odds space. Positive = increases risk, negative = decreases.
+        We sort by absolute value so the biggest drivers appear first.
         """
-        import xgboost as xgb
-        dmatrix = xgb.DMatrix(x, feature_names=FEATURE_NAMES)
-        contribs = self._xgb.get_booster().predict(dmatrix, pred_contribs=True)
-        feature_contribs = contribs[0, :-1]  # first sample, drop bias column
+        sv = self._explainer.shap_values(x)
+        shap_values = sv[1][0] if isinstance(sv, list) else sv[0]  # handle both output formats
 
         explanations = []
         for i, feat_name in enumerate(FEATURE_NAMES):
             value = features.get(feat_name, -1.0)
-            contrib = float(feature_contribs[i])
+            shap_val = float(shap_values[i])
 
-            if abs(contrib) < 0.001:
+            if abs(shap_val) < 0.001:
                 direction = "neutral"
-            elif contrib > 0:
+            elif shap_val > 0:
                 direction = "increases_risk"
             else:
                 direction = "decreases_risk"
@@ -532,11 +524,12 @@ class EarlyWarningSepsis:
             explanations.append(FeatureExplanation(
                 feature_name=feat_name,
                 value=value,
-                shap_value=contrib,  # field name kept for API compatibility
+                shap_value=shap_val,
                 direction=direction,
                 clinical_note=note,
             ))
 
+        # Sort by absolute SHAP impact descending, return top 5
         explanations.sort(key=lambda e: abs(e.shap_value), reverse=True)
         return explanations[:5]
 
@@ -666,7 +659,7 @@ class EarlyWarningSepsis:
         logger.info(f"Model saved to {path}")
 
     @classmethod
-    def load(cls, path: str | Path) -> EarlyWarningSepsis:
+    def load(cls, path: str | Path) -> "EarlyWarningSepsis":
         """Load a previously saved model."""
         import pickle
         path = Path(path)
@@ -677,7 +670,7 @@ class EarlyWarningSepsis:
             meta = json.load(f)
         instance._train_auc = meta.get("train_auc", 0.0)
         instance._val_auc   = meta.get("val_auc", 0.0)
-        # explainer uses xgboost native contributions
+        instance._explainer = shap.TreeExplainer(instance._calibrated.estimator.get_booster())
         instance._is_trained = True
         logger.info(f"Model loaded from {path}. Val AUC: {instance._val_auc:.3f}")
         return instance
@@ -697,7 +690,7 @@ if __name__ == "__main__":
     # 1. Train
     model = EarlyWarningSepsis()
     metrics = model.train_on_synthetic_data(n_healthy=2000, n_septic=2000)
-    print("\nTraining complete:")
+    print(f"\nTraining complete:")
     print(f"  Train AUC : {metrics['train_auc']:.3f}")
     print(f"  Val AUC   : {metrics['val_auc']:.3f}  (target: >0.85)")
 

@@ -5,19 +5,18 @@ description = "Virtual junior doctor AI for under-resourced hospitals"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.141.1",
+    "flower>=2.1.0",
+    "itsdangerous>=2.2.0",
+    "langchain-core>=1.6.3",
+    "langgraph>=1.2.11",
     "numpy==1.26.4",
+    "python-multipart>=0.0.32",
+    "reportlab>=5.0.1",
     "scikit-learn>=1.9.0",
     "scispacy>=0.2.4",
+    "shap==0.47.0",
     "spacy==3.7.5",
-    "xgboost>=3.4.1",
-    "fastapi>=0.115.0",
-    "uvicorn>=0.30.0",
-    "pydantic>=2.0.0",
-    "langgraph>=1.2.11",
-    "flwr[simulation]>=1.32.1",
-]
-
-[dependency-groups]
-dev = [
-    "ruff>=0.16.6",
+    "uvicorn>=0.52.4",
+    "xgboost==1.7.6",
 ]

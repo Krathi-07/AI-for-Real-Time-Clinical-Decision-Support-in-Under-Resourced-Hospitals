@@ -18,6 +18,7 @@ data/processed/
 *.json.gz
 
 # Trained model files — too large for git
+models/
 *.pkl
 *.pt
 *.h5

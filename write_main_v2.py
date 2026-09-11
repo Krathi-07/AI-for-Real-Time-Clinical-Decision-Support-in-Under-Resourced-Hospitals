@@ -1,8 +1,9 @@
-# src/api/main.py
+from pathlib import Path
+
+content = '''# src/api/main.py
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -92,7 +93,7 @@ def login_submit(
 ):
     if username == VALID_USER and password == VALID_PASS:
         token = make_session_cookie(username)
-        response = RedirectResponse(url="/about", status_code=303)
+        response = RedirectResponse(url="/dashboard", status_code=303)
         response.set_cookie(
             key=COOKIE_NAME,
             value=token,
@@ -102,7 +103,7 @@ def login_submit(
         )
         return response
     html = Path("src/dashboard/login.html").read_text(encoding="utf-8")
-    html = html.replace("<!-- ERROR -->", "<div class=\"error-msg\">Invalid username or password.</div>")
+    html = html.replace("<!-- ERROR -->", "<div class=\\"error-msg\\">Invalid username or password.</div>")
     return HTMLResponse(content=html, status_code=401)
 
 
@@ -128,31 +129,6 @@ def demo_page(request: Request):
     if not user:
         return RedirectResponse(url="/login")
     return FileResponse("src/dashboard/demo.html")
-
-
-
-@app.get("/about", include_in_schema=False)
-def about_page(request: Request):
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login")
-    return FileResponse("src/dashboard/about.html")
-
-
-@app.get("/federated", include_in_schema=False)
-def federated_page(request: Request):
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login")
-    return FileResponse("src/dashboard/federated.html")
-
-
-@app.get("/audit-page", include_in_schema=False)
-def audit_page(request: Request):
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login")
-    return FileResponse("src/dashboard/audit_page.html")
 
 
 # --- Health ---
@@ -342,3 +318,7 @@ def download_report(patient_id: str, request: Request):
     doc.build(story)
     return FileResponse(pdf_path, media_type="application/pdf",
                         filename=f"clinical_report_{patient_id}.pdf")
+'''
+
+Path('src/api/main.py').write_text(content, encoding='utf-8')
+print('main.py written OK')

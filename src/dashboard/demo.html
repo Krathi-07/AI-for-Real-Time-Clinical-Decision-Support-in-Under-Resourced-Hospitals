@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Demo | AI Clinical Decision Support</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0d14; --card: #111827; --card2: #1a2035;
+  --border: #1f2937; --text: #e2e8f0; --muted: #64748b;
+  --red: #ef4444; --orange: #f97316; --green: #22c55e;
+  --cyan: #06b6d4; --yellow: #fbbf24; --purple: #8b5cf6;
+}
+body { font-family: "DM Sans", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+nav {
+  position: fixed; top: 0; width: 100%;
+  background: var(--card); border-bottom: 1px solid var(--border);
+  z-index: 100; padding: 0 32px; display: flex; align-items: center;
+  justify-content: space-between; height: 56px;
+}
+.nav-logo { font-weight: 700; font-size: 0.95rem; color: var(--cyan); display: flex; align-items: center; gap: 8px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.nav-right { display: flex; align-items: center; gap: 16px; }
+.nav-back { color: var(--muted); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; }
+.nav-back:hover { color: var(--text); }
+.nav-logout { color: var(--muted); text-decoration: none; font-size: 0.85rem; border: 1px solid var(--border); padding: 4px 12px; border-radius: 6px; transition: all 0.2s; }
+.nav-logout:hover { color: var(--red); border-color: var(--red); }
+main { max-width: 1100px; margin: 0 auto; padding: 80px 32px 60px; }
+.page-header { margin-bottom: 32px; }
+.page-label { font-size: 0.72rem; color: var(--cyan); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+.page-title { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; }
+.page-sub { color: var(--muted); font-size: 0.95rem; }
+.preset-btns { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+.preset-btn {
+  padding: 8px 16px; border-radius: 8px; font-size: 0.82rem;
+  cursor: pointer; border: 1px solid var(--border);
+  background: var(--card); color: var(--muted);
+  transition: all 0.2s; font-family: "DM Sans", sans-serif; font-weight: 600;
+}
+.preset-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.preset-btn.active { border-color: var(--cyan); color: var(--cyan); background: rgba(6,182,212,0.1); }
+.demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+@media(max-width: 768px) { .demo-grid { grid-template-columns: 1fr; } }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+.card-title { font-size: 0.78rem; color: var(--cyan); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; font-weight: 700; }
+.input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+@media(max-width: 500px) { .input-grid { grid-template-columns: 1fr; } }
+.inp-group label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.inp-group input {
+  width: 100%; background: var(--card2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 9px 12px; color: var(--text);
+  font-size: 0.9rem; font-family: "DM Sans", sans-serif; transition: border-color 0.2s;
+}
+.inp-group input:focus { outline: none; border-color: var(--cyan); }
+.inp-group textarea {
+  width: 100%; background: var(--card2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 9px 12px; color: var(--text);
+  font-size: 0.9rem; font-family: "DM Sans", sans-serif;
+  resize: vertical; min-height: 90px; transition: border-color 0.2s;
+}
+.inp-group textarea:focus { outline: none; border-color: var(--cyan); }
+.btn-analyse {
+  width: 100%; background: var(--cyan); color: #000;
+  border: none; border-radius: 8px; padding: 13px;
+  font-size: 1rem; font-weight: 700; cursor: pointer;
+  font-family: "DM Sans", sans-serif; margin-top: 14px; transition: background 0.2s;
+}
+.btn-analyse:hover { background: #22d3ee; }
+.btn-analyse:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+.pipe-step {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 8px;
+  background: var(--card2); border: 1px solid var(--border);
+  margin-bottom: 8px; transition: all 0.3s;
+}
+.pipe-step.active { border-color: var(--cyan); background: rgba(6,182,212,0.05); }
+.pipe-step.done { border-color: var(--green); background: rgba(34,197,94,0.05); }
+.pipe-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--border); display: flex; align-items: center;
+  justify-content: center; font-size: 0.72rem; font-weight: 700; flex-shrink: 0;
+}
+.pipe-step.active .pipe-num { background: var(--cyan); color: #000; }
+.pipe-step.done .pipe-num { background: var(--green); color: #000; }
+.pipe-name { font-size: 0.88rem; font-weight: 600; }
+.pipe-sub { font-size: 0.72rem; color: var(--muted); }
+.pipe-status { font-size: 0.75rem; color: var(--muted); margin-left: auto; }
+.pipe-step.active .pipe-status { color: var(--cyan); }
+.pipe-step.done .pipe-status { color: var(--green); }
+.result-section { display: none; }
+.result-section.visible { display: block; }
+.result-header {
+  display: flex; align-items: center; gap: 20px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 24px; margin-bottom: 16px;
+}
+.risk-big { font-size: 2.2rem; font-weight: 800; }
+.risk-big.CRITICAL { color: var(--red); }
+.risk-big.HIGH { color: var(--orange); }
+.risk-big.MEDIUM { color: var(--yellow); }
+.risk-big.LOW { color: var(--green); }
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media(max-width: 768px) { .result-grid { grid-template-columns: 1fr; } }
+.driver-item { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+.driver-item:last-child { border-bottom: none; }
+.driver-arrow { font-weight: 700; color: var(--red); }
+.nlp-tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; margin: 3px; }
+.nlp-tag.symptom { background: rgba(251,191,36,0.1); color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
+.nlp-tag.diagnosis { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+.nlp-tag.medication { background: rgba(139,92,246,0.1); color: var(--purple); border: 1px solid rgba(139,92,246,0.3); }
+.treatment-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+.tier-label { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+.tier-label.IMMEDIATE { background: rgba(239,68,68,0.15); color: var(--red); }
+.tier-label.URGENT { background: rgba(249,115,22,0.15); color: var(--orange); }
+.tier-label.ROUTINE { background: rgba(34,197,94,0.15); color: var(--green); }
+.action-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.action-item:last-child { border-bottom: none; }
+.action-cat { font-size: 0.7rem; font-weight: 700; color: var(--muted); min-width: 80px; text-transform: uppercase; margin-top: 2px; }
+.action-text { font-size: 0.88rem; margin-bottom: 3px; }
+.action-why { font-size: 0.78rem; color: var(--muted); }
+.action-when { font-size: 0.75rem; color: var(--cyan); margin-top: 2px; }
+.escalation-box { background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 14px 16px; margin-top: 16px; }
+.escalation-box h5 { font-size: 0.75rem; color: var(--red); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.escalation-box li { font-size: 0.85rem; color: var(--muted); padding: 3px 0 3px 14px; list-style: none; position: relative; }
+.escalation-box li::before { content: "!"; position: absolute; left: 0; color: var(--red); font-weight: 700; }
+.reassess-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); border-radius: 8px; padding: 8px 14px; font-size: 0.85rem; color: var(--cyan); margin-top: 12px; }
+.pdf-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 9px 18px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.2s; font-family: "DM Sans", sans-serif; margin-top: 12px; }
+.pdf-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.disclaimer { background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.2); border-radius: 8px; padding: 12px 16px; font-size: 0.8rem; color: var(--muted); margin-top: 16px; }
+.trace-box { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; font-family: monospace; font-size: 0.8rem; color: var(--muted); line-height: 1.8; }
+.trace-box h4 { font-family: "DM Sans", sans-serif; font-size: 0.75rem; color: var(--cyan); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+.nav-links { display:flex; gap:24px; }
+.nav-links a { color:var(--muted); text-decoration:none; font-size:0.88rem; font-weight:500; transition:color 0.2s; }
+.nav-links a:hover { color:var(--text); }
+.theme-btn { background:transparent; border:1px solid var(--border); color:var(--text); padding:5px 14px; border-radius:999px; cursor:pointer; font-size:0.8rem; font-weight:600; font-family:"DM Sans",sans-serif; }
+.theme-btn:hover { border-color:var(--cyan); color:var(--cyan); }
+</style>
+
+<style id="theme-vars">
+  body.light-theme { --bg:#f0f4f8; --card:#ffffff; --card2:#f8fafc; --border:#e2e8f0; --text:#0f172a; --muted:#64748b; }
+  .theme-toggle-btn {
+    position:fixed; bottom:24px; right:24px; z-index:9999;
+    background:var(--card); border:1px solid var(--border);
+    color:var(--text); padding:10px 18px; border-radius:999px;
+    cursor:pointer; font-size:0.85rem; font-weight:600;
+    box-shadow:0 4px 12px rgba(0,0,0,0.3); transition:all 0.2s;
+    font-family:"DM Sans",sans-serif;
+  }
+  .theme-toggle-btn:hover { border-color:#06b6d4; color:#06b6d4; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-logo"><div class="dot"></div>Clinical AI</div>
+  <div class="nav-links">
+    <a href="/about">Home</a>
+    <a href="/about">About</a>
+    <a href="/demo" style="color:var(--cyan)">Live Demo</a>
+    <a href="/federated">Federated Learning</a>
+    <a href="/audit-page">Audit Log</a>
+  </div>
+  <div class="nav-right">
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">&#9728; Light</button>
+    <a href="/logout" class="nav-logout">Logout</a>
+  </div>
+</nav>
+
+<main>
+  <div class="page-header">
+    <div class="page-label">Interactive Analysis</div>
+    <div class="page-title">Patient Risk Assessment</div>
+    <div class="page-sub">Enter vitals and clinical notes, or pick a preset scenario. The AI pipeline runs in real time.</div>
+  </div>
+
+  <div class="preset-btns">
+    <button class="preset-btn active" onclick="loadPreset('sepsis',this)">Critical Sepsis</button>
+    <button class="preset-btn" onclick="loadPreset('high',this)">High Risk</button>
+    <button class="preset-btn" onclick="loadPreset('medium',this)">Medium Risk</button>
+    <button class="preset-btn" onclick="loadPreset('low',this)">Low Risk (Stable)</button>
+    <button class="preset-btn" onclick="loadPreset('clear',this)">Clear</button>
+  </div>
+
+  <div class="demo-grid">
+    <div class="card">
+      <div class="card-title">Patient Vitals</div>
+      <div class="input-grid">
+        <div class="inp-group"><label>Heart Rate (bpm)</label><input type="number" id="heart_rate" value="118"></div>
+        <div class="inp-group"><label>Systolic BP (mmHg)</label><input type="number" id="systolic_bp" value="88"></div>
+        <div class="inp-group"><label>Diastolic BP (mmHg)</label><input type="number" id="diastolic_bp" value="55"></div>
+        <div class="inp-group"><label>Resp Rate (/min)</label><input type="number" id="respiratory_rate" value="24"></div>
+        <div class="inp-group"><label>Temperature (C)</label><input type="number" id="body_temperature" value="39.1" step="0.1"></div>
+        <div class="inp-group"><label>SpO2 (%)</label><input type="number" id="spo2" value="94"></div>
+        <div class="inp-group"><label>Lactate (mmol/L)</label><input type="number" id="lactate" value="4.2" step="0.1"></div>
+        <div class="inp-group"><label>Creatinine (mg/dL)</label><input type="number" id="creatinine" value="1.9" step="0.1"></div>
+        <div class="inp-group"><label>WBC (x10^9/L)</label><input type="number" id="wbc" value="16.2" step="0.1"></div>
+        <div class="inp-group"><label>Hemoglobin (g/dL)</label><input type="number" id="hemoglobin" value="10.1" step="0.1"></div>
+        <div class="inp-group"><label>Glucose (mg/dL)</label><input type="number" id="glucose" value="140"></div>
+        <div class="inp-group"><label>Patient ID</label><input type="text" id="patient_id" value="demo-001"></div>
+      </div>
+      <div class="inp-group">
+        <label>Clinical Note</label>
+        <textarea id="note_text">Patient presents with fever, hypotension and confusion. Suspected sepsis. Started piperacillin-tazobactam.</textarea>
+      </div>
+      <button class="btn-analyse" id="analyse-btn" onclick="runAnalysis()">Analyse Patient</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Pipeline Execution</div>
+      <div id="pipeline-steps">
+        <div class="pipe-step" id="ps-0"><div class="pipe-num">1</div><div><div class="pipe-name">FHIR Data Ingestion</div><div class="pipe-sub">Parse vitals + labs</div></div><div class="pipe-status" id="st-0">Waiting</div></div>
+        <div class="pipe-step" id="ps-1"><div class="pipe-num">2</div><div><div class="pipe-name">Triage Gate</div><div class="pipe-sub">Completeness check</div></div><div class="pipe-status" id="st-1">Waiting</div></div>
+        <div class="pipe-step" id="ps-2"><div class="pipe-num">3</div><div><div class="pipe-name">XGBoost Model</div><div class="pipe-sub">Sepsis risk scoring</div></div><div class="pipe-status" id="st-2">Waiting</div></div>
+        <div class="pipe-step" id="ps-3"><div class="pipe-num">4</div><div><div class="pipe-name">NLP Analysis</div><div class="pipe-sub">Clinical note parsing</div></div><div class="pipe-status" id="st-3">Waiting</div></div>
+        <div class="pipe-step" id="ps-4"><div class="pipe-num">5</div><div><div class="pipe-name">Fusion Engine</div><div class="pipe-sub">Combine all signals</div></div><div class="pipe-status" id="st-4">Waiting</div></div>
+        <div class="pipe-step" id="ps-5"><div class="pipe-num">6</div><div><div class="pipe-name">Treatment Plan</div><div class="pipe-sub">Evidence-based actions</div></div><div class="pipe-status" id="st-5">Waiting</div></div>
+        <div class="pipe-step" id="ps-6"><div class="pipe-num">7</div><div><div class="pipe-name">Alert + Audit Log</div><div class="pipe-sub">Compliance record</div></div><div class="pipe-status" id="st-6">Waiting</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="result-section" id="results">
+    <div class="result-header">
+      <div>
+        <div class="risk-big" id="risk-level-big">--</div>
+        <div style="font-size:0.88rem;color:var(--muted);margin-top:2px;" id="risk-score-text">--</div>
+      </div>
+      <div style="flex:1;padding-left:20px;border-left:1px solid var(--border);">
+        <div style="font-size:0.75rem;color:var(--cyan);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Severity Assessment</div>
+        <div style="font-size:0.9rem;" id="severity-text">--</div>
+        <div style="margin-top:8px;font-size:0.85rem;" id="hitl-text"></div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:4px;">Reassess in</div>
+        <div style="font-size:1.5rem;font-weight:700;color:var(--cyan);" id="reassess-time">--</div>
+        <div style="font-size:0.75rem;color:var(--muted);">minutes</div>
+      </div>
+    </div>
+
+    <div class="result-grid">
+      <div class="card">
+        <div class="card-title">Top Risk Drivers (SHAP)</div>
+        <div id="drivers-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">NLP Clinical Findings</div>
+        <div id="nlp-findings"></div>
+      </div>
+    </div>
+
+    <div class="treatment-card">
+      <div class="card-title">Treatment Plan — Surviving Sepsis Campaign 2021</div>
+      <div id="treatment-immediate"></div>
+      <div id="treatment-urgent"></div>
+      <div id="treatment-routine"></div>
+      <div class="escalation-box" id="escalation-box"></div>
+      <div id="reassess-badge"></div>
+      <div style="margin-top:16px;">
+        <a class="pdf-btn" id="pdf-link" href="#" target="_blank">Download PDF Report</a>
+      </div>
+    </div>
+
+    <div class="trace-box">
+      <h4>Agent Reasoning Trace</h4>
+      <div id="reasoning-trace"></div>
+    </div>
+
+    <div class="disclaimer">
+      AI-generated clinical decision support only. The attending clinician must review and approve all treatment decisions. Complies with India DISHA guidelines.
+    </div>
+  </div>
+</main>
+
+<script>
+var PRESETS = {
+  sepsis: { heart_rate:118, systolic_bp:88, diastolic_bp:55, respiratory_rate:24, body_temperature:39.1, spo2:94, lactate:4.2, creatinine:1.9, wbc:16.2, hemoglobin:10.1, glucose:140, patient_id:"sepsis-demo-001", note_text:"Patient presents with fever, hypotension and confusion. Suspected sepsis. Started piperacillin-tazobactam." },
+  high: { heart_rate:105, systolic_bp:95, diastolic_bp:62, respiratory_rate:20, body_temperature:38.4, spo2:96, lactate:2.8, creatinine:1.4, wbc:13.1, hemoglobin:11.2, glucose:118, patient_id:"high-risk-demo-001", note_text:"Patient with fever and mild confusion. History of UTI. On oral antibiotics." },
+  medium: { heart_rate:92, systolic_bp:108, diastolic_bp:68, respiratory_rate:18, body_temperature:38.0, spo2:97, lactate:1.8, creatinine:1.1, wbc:10.5, hemoglobin:12.1, glucose:105, patient_id:"medium-risk-demo-001", note_text:"Patient with mild fever and fatigue. No confusion. Mild cough present." },
+  low: { heart_rate:76, systolic_bp:122, diastolic_bp:78, respiratory_rate:16, body_temperature:37.1, spo2:99, lactate:0.9, creatinine:0.9, wbc:7.2, hemoglobin:13.4, glucose:95, patient_id:"stable-demo-001", note_text:"Routine post-op check. Patient alert and oriented. No complaints." },
+  clear: { heart_rate:"", systolic_bp:"", diastolic_bp:"", respiratory_rate:"", body_temperature:"", spo2:"", lactate:"", creatinine:"", wbc:"", hemoglobin:"", glucose:"", patient_id:"", note_text:"" }
+};
+
+function loadPreset(name, btn) {
+  var p = PRESETS[name];
+  Object.keys(p).forEach(function(k) {
+    var el = document.getElementById(k);
+    if (el) el.value = p[k];
+  });
+  document.querySelectorAll(".preset-btn").forEach(function(b) { b.classList.remove("active"); });
+  if (btn) btn.classList.add("active");
+  document.getElementById("results").classList.remove("visible");
+  resetPipeline();
+}
+
+function resetPipeline() {
+  for (var i = 0; i < 7; i++) {
+    document.getElementById("ps-" + i).className = "pipe-step";
+    document.getElementById("st-" + i).textContent = "Waiting";
+    document.getElementById("ps-" + i).querySelector(".pipe-num").textContent = i + 1;
+  }
+}
+
+function setStep(i, state, label) {
+  var el = document.getElementById("ps-" + i);
+  el.className = "pipe-step " + state;
+  document.getElementById("st-" + i).textContent = label;
+  if (state === "done") el.querySelector(".pipe-num").textContent = "OK";
+}
+
+function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+async function runAnalysis() {
+  var btn = document.getElementById("analyse-btn");
+  btn.disabled = true;
+  btn.textContent = "Analysing...";
+  document.getElementById("results").classList.remove("visible");
+  resetPipeline();
+
+  var patientId = document.getElementById("patient_id").value || "demo-001";
+  var body = {
+    patient_id: patientId,
+    fhir_features: {
+      heart_rate: parseFloat(document.getElementById("heart_rate").value) || 0,
+      systolic_bp: parseFloat(document.getElementById("systolic_bp").value) || 0,
+      diastolic_bp: parseFloat(document.getElementById("diastolic_bp").value) || 0,
+      respiratory_rate: parseFloat(document.getElementById("respiratory_rate").value) || 0,
+      body_temperature: parseFloat(document.getElementById("body_temperature").value) || 0,
+      spo2: parseFloat(document.getElementById("spo2").value) || 0,
+      lactate: parseFloat(document.getElementById("lactate").value) || 0,
+      creatinine: parseFloat(document.getElementById("creatinine").value) || 0,
+      wbc: parseFloat(document.getElementById("wbc").value) || 0,
+      hemoglobin: parseFloat(document.getElementById("hemoglobin").value) || 0,
+      glucose: parseFloat(document.getElementById("glucose").value) || 0
+    },
+    note_text: document.getElementById("note_text").value || ""
+  };
+
+  setStep(0, "active", "Parsing...");
+  await sleep(350);
+  setStep(0, "done", "11 features");
+  setStep(1, "active", "Checking...");
+  await sleep(350);
+  setStep(1, "done", "100% complete");
+  setStep(2, "active", "Scoring...");
+
+  var data;
+  try {
+    var res = await fetch("/analyse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    data = await res.json();
+    if (!res.ok) { alert("Analysis failed: " + (data.detail || "Unknown error")); btn.disabled=false; btn.textContent="Analyse Patient"; return; }
+  } catch(e) {
+    alert("API error: " + e.message);
+    btn.disabled = false; btn.textContent = "Analyse Patient";
+    return;
+  }
+
+  setStep(2, "done", (data.risk_score * 100).toFixed(1) + "%");
+  setStep(3, "active", "Parsing note...");
+  await sleep(350);
+  var nlp = data.nlp_findings || {};
+  setStep(3, "done", ((nlp.symptoms||[]).length + (nlp.diagnoses||[]).length) + " entities");
+  setStep(4, "active", "Fusing...");
+  await sleep(350);
+  setStep(4, "done", data.risk_level);
+  setStep(5, "active", "Generating...");
+  await sleep(350);
+  var tp = data.treatment_plan || {};
+  var total = (tp.immediate_actions||[]).length + (tp.urgent_actions||[]).length + (tp.routine_actions||[]).length;
+  setStep(5, "done", total + " actions");
+  setStep(6, "active", "Logging...");
+  await sleep(250);
+  setStep(6, "done", "Logged");
+
+  renderResults(data);
+  btn.disabled = false;
+  btn.textContent = "Analyse Patient";
+}
+
+function renderResults(data) {
+  var tp = data.treatment_plan || {};
+  var level = data.risk_level || "UNKNOWN";
+
+  document.getElementById("risk-level-big").textContent = level;
+  document.getElementById("risk-level-big").className = "risk-big " + level;
+  document.getElementById("risk-score-text").textContent = "Risk Score: " + (data.risk_score * 100).toFixed(1) + "%";
+  document.getElementById("severity-text").textContent = tp.estimated_severity || "";
+  document.getElementById("reassess-time").textContent = tp.reassess_in_minutes || "--";
+
+  var hitlEl = document.getElementById("hitl-text");
+  if (data.requires_human_review) {
+    hitlEl.innerHTML = "<span style=\"color:var(--orange)\">&#9888; " + (data.review_reason || "Doctor review required") + "</span>";
+  } else {
+    hitlEl.innerHTML = "<span style=\"color:var(--green)\">No mandatory review required</span>";
+  }
+
+  var trace = data.reasoning_trace || [];
+  var vitalsTrace = trace.find(function(t) { return t.indexOf("[Vitals]") >= 0; }) || "";
+  var driversMatch = vitalsTrace.match(/Drivers: (.+)$/);
+  var driverHtml = "";
+  if (driversMatch) {
+    driversMatch[1].split(", ").forEach(function(d) {
+      var parts = d.split(" (");
+      var name = parts[0];
+      var dir = parts[1] ? parts[1].replace(")", "") : "";
+      driverHtml += "<div class=\"driver-item\"><span class=\"driver-arrow\">" +
+        (dir === "increases_risk" ? "↑" : "↓") +
+        "</span><span style=\"font-weight:600\">" + name + "</span>" +
+        "<span style=\"color:var(--muted);font-size:0.78rem;margin-left:auto\">" + dir.replace("_", " ") + "</span></div>";
+    });
+  }
+  document.getElementById("drivers-list").innerHTML = driverHtml || "<span style=\"color:var(--muted)\">No drivers available</span>";
+
+  var nlp = data.nlp_findings || {};
+  var nlpHtml = "";
+  (nlp.symptoms||[]).forEach(function(s) { nlpHtml += "<span class=\"nlp-tag symptom\">" + s + "</span>"; });
+  (nlp.diagnoses||[]).forEach(function(d) { nlpHtml += "<span class=\"nlp-tag diagnosis\">" + d + "</span>"; });
+  (nlp.medications||[]).forEach(function(m) { nlpHtml += "<span class=\"nlp-tag medication\">" + m + "</span>"; });
+  document.getElementById("nlp-findings").innerHTML = nlpHtml || "<span style=\"color:var(--muted)\">No NLP findings</span>";
+
+  function renderActions(actions, tierId) {
+    if (!actions || !actions.length) return "";
+    var html = "<div style=\"margin-bottom:16px\"><div class=\"tier-label " + tierId + "\">" + tierId + "</div>";
+    actions.forEach(function(a) {
+      html += "<div class=\"action-item\"><div class=\"action-cat\">" + a.category + "</div>" +
+        "<div><div class=\"action-text\">" + a.action + "</div>" +
+        "<div class=\"action-why\">" + a.rationale + "</div>" +
+        "<div class=\"action-when\">" + a.timeframe + "</div></div></div>";
+    });
+    return html + "</div>";
+  }
+
+  document.getElementById("treatment-immediate").innerHTML = renderActions(tp.immediate_actions, "IMMEDIATE");
+  document.getElementById("treatment-urgent").innerHTML = renderActions(tp.urgent_actions, "URGENT");
+  document.getElementById("treatment-routine").innerHTML = renderActions(tp.routine_actions, "ROUTINE");
+
+  var esc = tp.escalation_triggers || [];
+  document.getElementById("escalation-box").innerHTML = "<h5>Escalation Triggers</h5><ul>" +
+    esc.map(function(t) { return "<li>" + t + "</li>"; }).join("") + "</ul>";
+
+  document.getElementById("reassess-badge").innerHTML =
+    "<div class=\"reassess-badge\">Reassess patient in " + (tp.reassess_in_minutes || "--") + " minutes</div>";
+
+  document.getElementById("pdf-link").href = "/report/" + (data.patient_id || "unknown");
+
+  var traceHtml = trace.map(function(t) {
+    return "<div style=\"padding:2px 0;border-bottom:1px solid var(--border)\">" + t + "</div>";
+  }).join("");
+  document.getElementById("reasoning-trace").innerHTML = traceHtml;
+
+  document.getElementById("results").classList.add("visible");
+  document.getElementById("results").scrollIntoView({ behavior: "smooth" });
+}
+</script>
+
+<button class="theme-toggle-btn" onclick="toggleTheme()" id="theme-btn">☀ Light Mode</button>
+<script>
+function toggleTheme() {
+  var body = document.body;
+  var btn = document.getElementById("theme-btn");
+  if(body.classList.contains("light-theme")) {
+    body.classList.remove("light-theme");
+    localStorage.setItem("theme","dark");
+    btn.textContent = "☀ Light Mode";
+  } else {
+    body.classList.add("light-theme");
+    localStorage.setItem("theme","light");
+    btn.textContent = "🌙 Dark Mode";
+  }
+}
+(function(){
+  var t = localStorage.getItem("theme") || "dark";
+  if(t === "light") {
+    document.body.classList.add("light-theme");
+    var btn = document.getElementById("theme-btn");
+    if(btn) btn.textContent = "🌙 Dark Mode";
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,4 +1,6 @@
-# src/agent/nodes.py
+from pathlib import Path
+
+content = '''# src/agent/nodes.py
 from src.agent.state import AgentState
 from src.models.early_warning import EarlyWarningSepsis
 from src.nlp.note_parser import ClinicalNoteParser
@@ -69,11 +71,6 @@ def vitals_node(state: AgentState) -> dict:
     trace = list(state.get("reasoning_trace", []))
     features = state.get("fhir_features", {})
     model = _get_warning_model()
-    # Derive pulse_pressure (systolic - diastolic) — required 12th feature
-    sbp = features.get("systolic_bp", -1.0)
-    dbp = features.get("diastolic_bp", -1.0)
-    if sbp > 0 and dbp > 0:
-        features = dict(features, pulse_pressure=sbp - dbp)
     prediction = model.predict(features)
 
     calibrated_level = _calibrate_risk(prediction.risk_score, features)
@@ -185,14 +182,14 @@ def summary_node(state: AgentState) -> dict:
     diagnosis_text = ", ".join(diagnoses) if diagnoses else "none in note"
 
     alert = (
-        f"CLINICAL ALERT - Risk Level: {risk} ({score:.1%})\n"
-        f"Model drivers: {driver_text}\n"
-        f"NLP symptoms: {symptom_text}\n"
-        f"NLP diagnoses: {diagnosis_text}\n"
+        f"CLINICAL ALERT - Risk Level: {risk} ({score:.1%})\\n"
+        f"Model drivers: {driver_text}\\n"
+        f"NLP symptoms: {symptom_text}\\n"
+        f"NLP diagnoses: {diagnosis_text}\\n"
         f"Data completeness: {completeness:.0%}"
     )
     if conflicts:
-        alert += "\nCONFLICTS: " + "; ".join(conflicts)
+        alert += "\\nCONFLICTS: " + "; ".join(conflicts)
 
     requires_review = risk in ("HIGH", "CRITICAL") or completeness < 0.5
     review_reason = ""
@@ -211,3 +208,7 @@ def summary_node(state: AgentState) -> dict:
         "review_reason": review_reason,
         "reasoning_trace": trace,
     }
+'''
+
+Path('src/agent/nodes.py').write_text(content, encoding='utf-8')
+print('nodes.py written OK')
