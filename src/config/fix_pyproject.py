@@ -1,4 +1,6 @@
-﻿[project]
+import pathlib
+
+content = '''[project]
 name = "clinical-ai-decision-support"
 version = "0.1.0"
 description = "Virtual junior doctor AI for under-resourced hospitals"
@@ -19,3 +21,8 @@ dependencies = [
     "uvicorn>=0.30.0",
     "xgboost==1.7.6",
 ]
+'''
+
+path = pathlib.Path("pyproject.toml")
+path.write_text(content, encoding="utf-8")
+print("pyproject.toml written successfully")
