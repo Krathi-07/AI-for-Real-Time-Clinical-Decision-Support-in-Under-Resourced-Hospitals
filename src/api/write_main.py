@@ -1,220 +1,580 @@
-content = r'''# src/api/main.py
-from __future__ import annotations
+import pathlib
 
+content = r'''
+# PASTE THE ENTIRE NEW main.py CONTENT HERE
+"""
+Clinical AI Decision Support — FastAPI Backend
+Handles: auth, patient registration, disease analysis, dashboard
+"""
+
+import json
 import logging
-import os
-from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from pathlib import Path
 
-from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, Form
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from fastapi import Cookie, FastAPI, Form, HTTPException, Request, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.sessions import SessionMiddleware
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
-from src.agent.graph import build_graph
-from src.agent.state import AgentState
-from src.alerts.alert_manager import AlertManager, FileAlertChannel
-from src.api.schemas import AnalyseRequest, HealthResponse
-from src.audit.audit_logger import AuditLogger
+from src.config.diseases import DISEASES, list_diseases
+from src.database.db import (
+    get_analyses_for_patient,
+    get_doctor_by_id,
+    get_patient,
+    get_patients_for_doctor,
+    init_db,
+    register_patient,
+    save_analysis,
+    verify_doctor,
+)
+from src.engine.disease_scorer import analyse
 
-load_dotenv()
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DASH_USER  = os.getenv("DASH_USER", "admin")
-DASH_PASS  = os.getenv("DASH_PASS", "clinic2026")
-SECRET_KEY = os.getenv("SECRET_KEY", "change-this-in-production-please")
+# ── App setup ─────────────────────────────────────────────────────────────────
+
+app = FastAPI(title="Clinical AI Decision Support", version="2.0.0")
+
+SECRET_KEY = "clinical-ai-secret-2026"
+signer = URLSafeTimedSerializer(SECRET_KEY)
+
+TEMPLATES_DIR = Path("src/templates")
+TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def require_login(request: Request) -> bool:
-    return request.session.get("logged_in") is True
+@app.on_event("startup")
+async def startup():
+    init_db()
+    logger.info("Database ready")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    logger.info("Starting up - compiling LangGraph clinical agent...")
-    app.state.agent = build_graph()
-    alert_manager = AlertManager()
-    alert_manager.add_channel(FileAlertChannel("logs/clinical_alerts.jsonl"))
-    app.state.alert_manager = alert_manager
-    app.state.audit_logger = AuditLogger("logs/audit_trail.jsonl")
-    app.state.agent_ready = True
-    logger.info("Clinical agent ready. Server accepting requests.")
-    yield
-    logger.info("Shutting down.")
+# ── Session helpers ───────────────────────────────────────────────────────────
+
+def create_session(doctor_id: int) -> str:
+    return signer.dumps({"doctor_id": doctor_id})
 
 
-app = FastAPI(
-    title="AI Clinical Decision Support API",
-    description="Real-time sepsis early warning for under-resourced hospitals.",
-    version="0.3.0",
-    lifespan=lifespan,
-)
-
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
-app.mount("/static", StaticFiles(directory="src/dashboard"), name="static")
-
-
-# Auth routes
-
-@app.get("/login", include_in_schema=False)
-def login_page():
-    return FileResponse("src/dashboard/login.html")
-
-
-@app.post("/login", include_in_schema=False)
-def login_submit(request: Request,
-                 username: str = Form(...),
-                 password: str = Form(...)):
-    if username == DASH_USER and password == DASH_PASS:
-        request.session["logged_in"] = True
-        return RedirectResponse(url="/dashboard", status_code=303)
-    return RedirectResponse(url="/login?error=1", status_code=303)
-
-
-@app.get("/logout", include_in_schema=False)
-def logout(request: Request):
-    request.session.clear()
-    return RedirectResponse(url="/login", status_code=303)
-
-
-# Dashboard and Demo
-
-@app.get("/", include_in_schema=False)
-def root():
-    return RedirectResponse(url="/dashboard", status_code=303)
-
-
-@app.get("/dashboard", include_in_schema=False)
-def dashboard(request: Request):
-    if not require_login(request):
-        return RedirectResponse(url="/login", status_code=303)
-    return FileResponse("src/dashboard/index.html")
-
-
-@app.get("/demo", include_in_schema=False)
-def demo_page(request: Request):
-    if not require_login(request):
-        return RedirectResponse(url="/login", status_code=303)
-    return FileResponse("src/dashboard/demo.html")
-
-
-# Health
-
-@app.get("/health", response_model=HealthResponse)
-def health_check():
-    ready = getattr(app.state, "agent_ready", False)
-    return HealthResponse(status="ok" if ready else "degraded", models_loaded=ready)
-
-
-# Audit
-
-@app.get("/audit")
-def get_audit_log(request: Request, n: int = 20):
-    if not require_login(request):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    records = request.app.state.audit_logger.tail(n)
-    return {"count": len(records), "records": records}
-
-
-# Analysis
-
-@app.post("/analyse")
-def analyse_patient(req: AnalyseRequest, request: Request):
-    if not require_login(request):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    if not getattr(app.state, "agent_ready", False):
-        raise HTTPException(status_code=503, detail="Agent not ready.")
-    if not req.fhir_features and not req.note_text.strip():
-        raise HTTPException(status_code=422, detail="Provide vitals or note_text.")
-
-    initial_state: AgentState = {
-        "patient_id": req.patient_id,
-        "fhir_features": req.fhir_features or {},
-        "note_text": req.note_text or "",
-        "reasoning_trace": [],
-        "data_sufficient": False,
-        "completeness_score": 0.0,
-        "model_risk_score": 0.0,
-        "model_risk_level": "LOW",
-        "model_drivers": [],
-        "nlp_symptoms": [],
-        "nlp_diagnoses": [],
-        "nlp_medications": [],
-        "nlp_vitals_mentioned": {},
-        "fused_risk_level": "LOW",
-        "conflicts": [],
-        "alert_text": "",
-        "requires_human_review": False,
-        "review_reason": "",
-        "treatment_plan": {},
-    }
-
+def get_session(session: str | None) -> dict | None:
+    if not session:
+        return None
     try:
-        result = app.state.agent.invoke(initial_state)
-
-        from types import SimpleNamespace
-        _nlp = SimpleNamespace(
-            symptoms=result["nlp_symptoms"],
-            diagnoses=result["nlp_diagnoses"],
-            negated_findings=[],
-        )
-        _snap = SimpleNamespace(
-            patient_id=result["patient_id"],
-            risk_level=result["fused_risk_level"],
-            risk_score=result["model_risk_score"],
-            model_version="0.6.0",
-            top_drivers=result["model_drivers"],
-            data_completeness=result["completeness_score"],
-            hitl_required=result["requires_human_review"],
-            fusion_rules_fired=[],
-            nlp_findings=_nlp,
-        )
-        request.app.state.audit_logger.log(_snap, source="api:/analyse")
-
-        if result["fused_risk_level"] in ("HIGH", "CRITICAL"):
-            request.app.state.alert_manager.process(_snap)
-
-        return JSONResponse(content={
-            "patient_id": result["patient_id"],
-            "risk_level": result["fused_risk_level"],
-            "risk_score": round(result["model_risk_score"], 4),
-            "alert_text": result["alert_text"],
-            "requires_human_review": result["requires_human_review"],
-            "review_reason": result["review_reason"],
-            "data_sufficient": result["data_sufficient"],
-            "completeness_score": round(result["completeness_score"], 3),
-            "nlp_findings": {
-                "symptoms": result["nlp_symptoms"],
-                "diagnoses": result["nlp_diagnoses"],
-                "medications": result["nlp_medications"],
-            },
-            "conflicts": result["conflicts"],
-            "reasoning_trace": result["reasoning_trace"],
-            "treatment_plan": result.get("treatment_plan", {}),
-        })
-
-    except Exception as e:
-        logger.exception(f"Analysis failed for patient {req.patient_id}")
-        raise HTTPException(status_code=500, detail=f"Analysis error: {e!s}")
+        return signer.loads(session, max_age=86400)
+    except (BadSignature, SignatureExpired):
+        return None
 
 
-# PDF Report
-
-@app.post("/report")
-def generate_report(request: Request, payload: dict):
-    if not require_login(request):
+def require_doctor(session: str | None) -> dict:
+    data = get_session(session)
+    if not data:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    from src.api.pdf_report import build_pdf
-    pdf_bytes = build_pdf(payload)
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=clinical_report_{payload.get('patient_id','unknown')}.pdf"},
+    doctor = get_doctor_by_id(data["doctor_id"])
+    if not doctor:
+        raise HTTPException(status_code=401, detail="Doctor not found")
+    return doctor
+
+
+# ── HTML helper ───────────────────────────────────────────────────────────────
+
+def html(content: str) -> HTMLResponse:
+    return HTMLResponse(content)
+
+
+def _base(title: str, body: str, doctor_name: str = "") -> str:
+    nav = f"<span style='color:#6ee7b7'>👨‍⚕️ {doctor_name}</span>" if doctor_name else ""
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title} — ClinicalAI</title>
+<style>
+  *{{box-sizing:border-box;margin:0;padding:0}}
+  body{{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}}
+  .navbar{{background:#1e293b;padding:1rem 2rem;display:flex;justify-content:space-between;
+           align-items:center;border-bottom:1px solid #334155}}
+  .navbar h1{{color:#6ee7b7;font-size:1.2rem;font-weight:700}}
+  .navbar a{{color:#94a3b8;text-decoration:none;margin-left:1.5rem;font-size:.9rem}}
+  .navbar a:hover{{color:#6ee7b7}}
+  .container{{max-width:1100px;margin:2rem auto;padding:0 1.5rem}}
+  .card{{background:#1e293b;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;
+         border:1px solid #334155}}
+  .card h2{{color:#6ee7b7;margin-bottom:1rem;font-size:1.1rem}}
+  input,select,textarea{{width:100%;padding:.6rem .8rem;background:#0f172a;border:1px solid #334155;
+    border-radius:6px;color:#e2e8f0;font-size:.9rem;margin-top:.3rem}}
+  input:focus,select:focus{{outline:none;border-color:#6ee7b7}}
+  .btn{{padding:.6rem 1.4rem;border:none;border-radius:6px;cursor:pointer;
+        font-size:.9rem;font-weight:600;transition:.2s}}
+  .btn-primary{{background:#10b981;color:#fff}}
+  .btn-primary:hover{{background:#059669}}
+  .btn-secondary{{background:#334155;color:#e2e8f0}}
+  .btn-danger{{background:#ef4444;color:#fff}}
+  .form-group{{margin-bottom:1rem}}
+  .form-group label{{font-size:.85rem;color:#94a3b8;display:block;margin-bottom:.2rem}}
+  .form-row{{display:grid;grid-template-columns:1fr 1fr;gap:1rem}}
+  .badge{{display:inline-block;padding:.2rem .6rem;border-radius:20px;font-size:.75rem;font-weight:600}}
+  .badge-critical{{background:#7f1d1d;color:#fca5a5}}
+  .badge-high{{background:#78350f;color:#fcd34d}}
+  .badge-moderate{{background:#1e3a5f;color:#93c5fd}}
+  .badge-low{{background:#14532d;color:#86efac}}
+  table{{width:100%;border-collapse:collapse;font-size:.9rem}}
+  th{{text-align:left;padding:.7rem 1rem;background:#0f172a;color:#64748b;font-size:.8rem;text-transform:uppercase}}
+  td{{padding:.7rem 1rem;border-bottom:1px solid #1e293b}}
+  tr:hover td{{background:#1e293b}}
+  .alert-success{{background:#14532d;color:#86efac;padding:.8rem 1rem;border-radius:8px;margin-bottom:1rem}}
+  .alert-error{{background:#7f1d1d;color:#fca5a5;padding:.8rem 1rem;border-radius:8px;margin-bottom:1rem}}
+  .risk-bar{{height:8px;border-radius:4px;background:#1e293b;margin-top:.4rem}}
+  .risk-fill{{height:100%;border-radius:4px}}
+  a{{color:#6ee7b7;text-decoration:none}}
+  a:hover{{text-decoration:underline}}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <h1>🏥 ClinicalAI — Decision Support</h1>
+  <div>{nav}
+    {"<a href='/dashboard'>Dashboard</a><a href='/register-patient'>Register Patient</a><a href='/logout'>Logout</a>" if doctor_name else ""}
+  </div>
+</nav>
+<div class="container">
+{body}
+</div>
+</body>
+</html>"""
+
+
+def _badge(level: str) -> str:
+    cls = {"CRITICAL": "badge-critical", "HIGH": "badge-high",
+           "MODERATE": "badge-moderate", "LOW": "badge-low"}.get(level, "badge-low")
+    return f'<span class="badge {cls}">{level}</span>'
+
+
+# ── Auth routes ───────────────────────────────────────────────────────────────
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    return RedirectResponse("/login")
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(error: str = ""):
+    err_html = f'<div class="alert-error">{error}</div>' if error else ""
+    body = f"""
+    <div style="max-width:420px;margin:4rem auto">
+      <div class="card">
+        <h2>🔐 Doctor Login</h2>
+        <p style="color:#64748b;font-size:.85rem;margin-bottom:1.5rem">
+          AI Clinical Decision Support System
+        </p>
+        {err_html}
+        <form method="post" action="/login">
+          <div class="form-group">
+            <label>Username</label>
+            <input name="username" placeholder="doctor" required>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" name="password" placeholder="••••••••" required>
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:.5rem">Login</button>
+        </form>
+        <p style="color:#475569;font-size:.8rem;margin-top:1rem;text-align:center">
+          Default: doctor / clinical2026
+        </p>
+      </div>
+    </div>"""
+    return html(_base("Login", body))
+
+
+@app.post("/login")
+async def login(response: Response, username: str = Form(...), password: str = Form(...)):
+    doctor = verify_doctor(username, password)
+    if not doctor:
+        return RedirectResponse("/login?error=Invalid+credentials", status_code=303)
+    session_token = create_session(doctor["id"])
+    resp = RedirectResponse("/dashboard", status_code=303)
+    resp.set_cookie("session", session_token, httponly=True, max_age=86400)
+    return resp
+
+
+@app.get("/logout")
+async def logout():
+    resp = RedirectResponse("/login", status_code=303)
+    resp.delete_cookie("session")
+    return resp
+
+
+# ── Dashboard ─────────────────────────────────────────────────────────────────
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(session: str | None = Cookie(default=None)):
+    doctor = require_doctor(session)
+    patients = get_patients_for_doctor(doctor["id"])
+
+    rows = ""
+    for p in patients:
+        analyses = get_analyses_for_patient(p["patient_id"])
+        last = analyses[0] if analyses else None
+        risk_badge = _badge(last["risk_level"]) if last else "<span style='color:#475569'>—</span>"
+        disease_name = DISEASES.get(p["disease_id"], type("x", (), {"name": p["disease_id"]})()).name
+        rows += f"""<tr>
+          <td><a href="/patient/{p['patient_id']}">{p['patient_id']}</a></td>
+          <td>{p['full_name']}</td>
+          <td>{p['age']} yrs / {p['gender']}</td>
+          <td>{disease_name}</td>
+          <td>{risk_badge}</td>
+          <td style="color:#64748b;font-size:.8rem">{p['registered_at'][:16]}</td>
+          <td>
+            <a href="/analyse/{p['patient_id']}">
+              <button class="btn btn-primary" style="padding:.3rem .8rem;font-size:.8rem">Analyse</button>
+            </a>
+          </td>
+        </tr>"""
+
+    empty = "<tr><td colspan='7' style='text-align:center;color:#475569;padding:2rem'>No patients registered yet</td></tr>" if not patients else ""
+
+    body = f"""
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+      <div>
+        <h2 style="color:#e2e8f0;font-size:1.4rem">Welcome, {doctor['full_name']}</h2>
+        <p style="color:#64748b">{doctor['hospital']} · {len(patients)} patient(s) registered</p>
+      </div>
+      <a href="/register-patient">
+        <button class="btn btn-primary">+ Register Patient</button>
+      </a>
+    </div>
+    <div class="card">
+      <h2>Your Patients</h2>
+      <table>
+        <thead><tr>
+          <th>Patient ID</th><th>Name</th><th>Age / Gender</th>
+          <th>Condition</th><th>Last Risk</th><th>Registered</th><th>Action</th>
+        </tr></thead>
+        <tbody>{rows}{empty}</tbody>
+      </table>
+    </div>"""
+    return html(_base("Dashboard", body, doctor["full_name"]))
+
+
+# ── Patient registration ──────────────────────────────────────────────────────
+
+@app.get("/register-patient", response_class=HTMLResponse)
+async def register_page(session: str | None = Cookie(default=None), msg: str = ""):
+    doctor = require_doctor(session)
+    disease_options = "".join(
+        f'<option value="{d["id"]}">{d["name"]}</option>'
+        for d in list_diseases()
     )
+    msg_html = f'<div class="alert-success">✅ {msg}</div>' if msg else ""
+    body = f"""
+    {msg_html}
+    <div class="card">
+      <h2>📋 Register New Patient</h2>
+      <form method="post" action="/register-patient">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input name="full_name" placeholder="Patient full name" required>
+          </div>
+          <div class="form-group">
+            <label>Age *</label>
+            <input name="age" type="number" min="0" max="120" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Gender *</label>
+            <select name="gender">
+              <option>Male</option><option>Female</option><option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input name="phone" placeholder="+91 98765 43210">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Address</label>
+          <input name="address" placeholder="Village / City, District, State">
+        </div>
+        <div class="form-group">
+          <label>Condition / Disease to Assess *</label>
+          <select name="disease_id">{disease_options}</select>
+        </div>
+        <div style="margin-top:1rem;display:flex;gap:1rem">
+          <button class="btn btn-primary" type="submit">Register Patient</button>
+          <a href="/dashboard"><button class="btn btn-secondary" type="button">Cancel</button></a>
+        </div>
+      </form>
+    </div>"""
+    return html(_base("Register Patient", body, doctor["full_name"]))
+
+
+@app.post("/register-patient")
+async def register_patient_post(
+    session: str | None = Cookie(default=None),
+    full_name: str = Form(...),
+    age: int = Form(...),
+    gender: str = Form(...),
+    phone: str = Form(""),
+    address: str = Form(""),
+    disease_id: str = Form(...),
+):
+    doctor = require_doctor(session)
+    patient_id = register_patient(full_name, age, gender, phone, address, disease_id, doctor["id"])
+    return RedirectResponse(f"/analyse/{patient_id}?msg=Patient+registered", status_code=303)
+
+
+# ── Analysis ──────────────────────────────────────────────────────────────────
+
+@app.get("/analyse/{patient_id}", response_class=HTMLResponse)
+async def analyse_page(patient_id: str, session: str | None = Cookie(default=None), msg: str = ""):
+    doctor = require_doctor(session)
+    patient = get_patient(patient_id)
+    if not patient:
+        raise HTTPException(404, "Patient not found")
+
+    disease = DISEASES.get(patient["disease_id"])
+    if not disease:
+        raise HTTPException(400, "Unknown disease")
+
+    # Build parameter input fields
+    param_fields = ""
+    for param in disease.parameters:
+        if param.input_type == "select":
+            opts = "".join(f'<option value="{o}">{o}</option>' for o in param.options)
+            field = f'<select name="{param.key}">{opts}</select>'
+        else:
+            placeholder = f"{param.normal_min}–{param.normal_max}" if param.normal_min is not None else ""
+            req = "required" if param.required else ""
+            field = f'<input type="number" step="0.01" name="{param.key}" placeholder="Normal: {placeholder} {param.unit}" {req}>'
+
+        param_fields += f"""
+        <div class="form-group">
+          <label>{param.label}
+            <span style="color:#475569;font-size:.75rem"> ({param.unit})</span>
+            {"<span style='color:#ef4444'> *</span>" if param.required else " <span style='color:#475569;font-size:.75rem'>(optional)</span>"}
+          </label>
+          {field}
+        </div>"""
+
+    msg_html = f'<div class="alert-success">✅ {msg}</div>' if msg else ""
+    body = f"""
+    {msg_html}
+    <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem">
+      <a href="/dashboard">← Dashboard</a>
+      <span style="color:#475569"> / </span>
+      <span style="color:#e2e8f0">{patient['full_name']}</span>
+    </div>
+    <div class="card">
+      <h2>🔬 Clinical Analysis — {disease.name}</h2>
+      <div style="color:#64748b;font-size:.85rem;margin-bottom:1.2rem">
+        Patient: <strong style="color:#e2e8f0">{patient['full_name']}</strong> ·
+        Age: <strong style="color:#e2e8f0">{patient['age']}</strong> ·
+        ID: <code style="color:#6ee7b7">{patient_id}</code>
+      </div>
+      <form method="post" action="/analyse/{patient_id}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1.5rem">
+          {param_fields}
+        </div>
+        <div style="margin-top:1.5rem;display:flex;gap:1rem">
+          <button class="btn btn-primary" type="submit">▶ Run Analysis</button>
+          <a href="/patient/{patient_id}">
+            <button class="btn btn-secondary" type="button">View History</button>
+          </a>
+        </div>
+      </form>
+    </div>"""
+    return html(_base(f"Analyse — {patient['full_name']}", body, doctor["full_name"]))
+
+
+@app.post("/analyse/{patient_id}")
+async def run_analysis(request: Request, patient_id: str, session: str | None = Cookie(default=None)):
+    doctor = require_doctor(session)
+    patient = get_patient(patient_id)
+    if not patient:
+        raise HTTPException(404, "Patient not found")
+
+    disease = DISEASES.get(patient["disease_id"])
+    form_data = await request.form()
+
+    # Parse parameters — convert numeric strings, keep select values as-is
+    parameters = {}
+    for param in disease.parameters:
+        val = form_data.get(param.key, "")
+        if param.input_type in ("select", "boolean"):
+            parameters[param.key] = val
+        else:
+            try:
+                parameters[param.key] = float(val) if val else None
+            except ValueError:
+                parameters[param.key] = None
+
+    # Remove None values
+    parameters = {k: v for k, v in parameters.items() if v is not None}
+
+    # Run scoring
+    result = analyse(patient["disease_id"], parameters)
+
+    # Save to DB
+    analysis_id = save_analysis(
+        patient_id=patient_id,
+        disease_id=patient["disease_id"],
+        risk_level=result.risk_level,
+        risk_score=result.risk_score,
+        parameters=json.dumps(parameters),
+        findings=json.dumps(result.findings),
+        recommendations=json.dumps(result.recommendations),
+        doctor_id=doctor["id"],
+    )
+
+    return RedirectResponse(f"/result/{analysis_id}", status_code=303)
+
+
+# ── Result page ───────────────────────────────────────────────────────────────
+
+@app.get("/result/{analysis_id}", response_class=HTMLResponse)
+async def result_page(analysis_id: int, session: str | None = Cookie(default=None)):
+    from src.database.db import get_connection
+    doctor = require_doctor(session)
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM analyses WHERE id=?", (analysis_id,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(404, "Analysis not found")
+
+    row = dict(row)
+    patient = get_patient(row["patient_id"])
+    findings = json.loads(row["findings"])
+    recs = json.loads(row["recommendations"])
+    params = json.loads(row["parameters"])
+
+    findings_html = "".join(f"<li style='margin:.4rem 0;color:#fcd34d'>⚠ {f}</li>" for f in findings)
+    recs_html = "".join(f"<li style='margin:.4rem 0;color:#86efac'>→ {r}</li>" for r in recs)
+    params_html = "".join(
+        f"<tr><td style='color:#94a3b8'>{k.replace('_',' ').title()}</td><td style='color:#e2e8f0'>{v}</td></tr>"
+        for k, v in params.items()
+    )
+
+    pct = int(row["risk_score"] * 100)
+    fill_color = {"CRITICAL": "#ef4444", "HIGH": "#f97316", "MODERATE": "#3b82f6", "LOW": "#10b981"}.get(row["risk_level"], "#10b981")
+
+    body = f"""
+    <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem">
+      <a href="/dashboard">← Dashboard</a>
+      <span style="color:#475569"> / </span>
+      <a href="/patient/{row['patient_id']}">{patient['full_name']}</a>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <h2>{DISEASES[row['disease_id']].name} — Analysis Result</h2>
+          <p style="color:#64748b;font-size:.85rem;margin-top:.3rem">
+            {patient['full_name']} · Age {patient['age']} · {patient['gender']} ·
+            <code style="color:#6ee7b7">{row['patient_id']}</code>
+          </p>
+        </div>
+        {_badge(row['risk_level'])}
+      </div>
+      <div style="margin:1.2rem 0">
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;color:#94a3b8;margin-bottom:.3rem">
+          <span>Risk Score</span><span style="color:{fill_color};font-weight:700">{pct}%</span>
+        </div>
+        <div class="risk-bar">
+          <div class="risk-fill" style="width:{pct}%;background:{fill_color}"></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div class="card">
+        <h2>🔍 Clinical Findings</h2>
+        <ul style="list-style:none;padding:0">{findings_html}</ul>
+      </div>
+      <div class="card">
+        <h2>💊 Recommendations</h2>
+        <ul style="list-style:none;padding:0">{recs_html}</ul>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📊 Parameters Entered</h2>
+      <table><tbody>{params_html}</tbody></table>
+    </div>
+    <div style="display:flex;gap:1rem;margin-top:1rem">
+      <a href="/report/{analysis_id}">
+        <button class="btn btn-primary">📄 Download PDF Report</button>
+      </a>
+      <a href="/analyse/{row['patient_id']}">
+        <button class="btn btn-secondary">🔄 Re-analyse</button>
+      </a>
+      <a href="/patient/{row['patient_id']}">
+        <button class="btn btn-secondary">📁 Patient History</button>
+      </a>
+    </div>"""
+    return html(_base(f"Result — {patient['full_name']}", body, doctor["full_name"]))
+
+
+# ── Patient history ───────────────────────────────────────────────────────────
+
+@app.get("/patient/{patient_id}", response_class=HTMLResponse)
+async def patient_history(patient_id: str, session: str | None = Cookie(default=None)):
+    doctor = require_doctor(session)
+    patient = get_patient(patient_id)
+    if not patient:
+        raise HTTPException(404, "Patient not found")
+
+    analyses = get_analyses_for_patient(patient_id)
+    rows = ""
+    for a in analyses:
+        pct = int(a["risk_score"] * 100)
+        rows += f"""<tr>
+          <td style="color:#64748b;font-size:.8rem">{a['created_at'][:16]}</td>
+          <td>{DISEASES.get(a['disease_id'], type('x',(),{'name':a['disease_id']})()).name}</td>
+          <td>{_badge(a['risk_level'])} {pct}%</td>
+          <td><a href="/result/{a['id']}">View</a> &nbsp;
+              <a href="/report/{a['id']}">PDF</a></td>
+        </tr>"""
+
+    disease_name = DISEASES.get(patient["disease_id"], type("x", (), {"name": patient["disease_id"]})()).name
+    body = f"""
+    <div style="margin-bottom:1rem"><a href="/dashboard">← Dashboard</a></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <h2>{patient['full_name']}</h2>
+          <p style="color:#64748b;font-size:.85rem;margin-top:.3rem">
+            ID: <code style="color:#6ee7b7">{patient_id}</code> ·
+            Age: {patient['age']} · {patient['gender']} ·
+            Condition: {disease_name}
+          </p>
+          <p style="color:#64748b;font-size:.85rem">
+            📞 {patient.get('phone') or '—'} &nbsp;|&nbsp;
+            📍 {patient.get('address') or '—'}
+          </p>
+        </div>
+        <a href="/analyse/{patient_id}">
+          <button class="btn btn-primary">▶ New Analysis</button>
+        </a>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Analysis History ({len(analyses)} records)</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Condition</th><th>Risk</th><th>Actions</th></tr></thead>
+        <tbody>
+          {rows if rows else "<tr><td colspan='4' style='text-align:center;color:#475569;padding:2rem'>No analyses yet</td></tr>"}
+        </tbody>
+      </table>
+    </div>"""
+    return html(_base(patient["full_name"], body, doctor["full_name"]))
+
+
+# ── Health check ──────────────────────────────────────────────────────────────
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "version": "2.0.0", "diseases": len(DISEASES)}
 '''
 
-with open("src/api/main.py", "w", encoding="utf-8") as f:
-    f.write(content)
-
-print("main.py written successfully")
+pathlib.Path("src/api/main.py").write_text(content.strip(), encoding="utf-8")
+print("Done")

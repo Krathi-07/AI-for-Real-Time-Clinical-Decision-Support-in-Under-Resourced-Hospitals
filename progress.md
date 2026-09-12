@@ -673,3 +673,37 @@ Then open: http://localhost:8000/login
 - spacy==3.7.5
 - en-ner-bc5cdr-md==0.5.4
 '@, [System.Text.UTF8Encoding]::new($false))
+
+## Session — Major Upgrade (Sir's Requirements) ✅
+
+### Changes Completed
+- Removed Federated Learning module entirely
+- Built disease registry (`src/config/diseases.py`) — 11 diseases with parameter schemas
+- Built SQLite database (`src/database/db.py`) — patients, doctors, analyses tables
+- Built rule-based clinical scoring engine (`src/engine/disease_scorer.py`) — all 11 diseases
+  using published clinical guidelines (qSOFA, HEART score, ADA, JNC-8, WHO thresholds)
+- Replaced entire `src/api/main.py` — new production system with:
+  - Doctor login/logout (session cookies via itsdangerous)
+  - Patient registration (name, age, gender, phone, address, disease)
+  - Doctor dashboard showing all registered patients with last risk badge
+  - Disease-specific parameter forms (only relevant inputs per disease)
+  - Analysis result page (risk score, findings, recommendations)
+  - Patient history page
+  - Full PDF report (patient info, risk summary, parameters table,
+    findings, recommendations, disclaimer, doctor signature line)
+
+### Default Credentials
+- Username: doctor / Password: clinical2026
+- Username: admin / Password: admin2026
+
+### Diseases Supported (11)
+Sepsis, Diabetes, Heart Attack, Hypertension, Cancer Screening,
+Respiratory Infection, Cold & Flu, Anaemia, Gastrointestinal,
+Musculoskeletal, Skin Infection
+
+### Pending
+- [ ] Light/Dark mode toggle
+- [ ] About page in navbar
+- [ ] Font upgrade (Inter/Poppins)
+- [ ] Deploy to Render
+- [ ] Update README
