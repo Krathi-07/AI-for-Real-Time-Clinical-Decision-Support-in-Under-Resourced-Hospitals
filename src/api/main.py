@@ -78,64 +78,101 @@ def html(content: str) -> HTMLResponse:
 
 
 def _base(title: str, body: str, doctor_name: str = "") -> str:
-    nav = f"<span style='color:#6ee7b7'>👨‍⚕️ {doctor_name}</span>" if doctor_name else ""
+    nav = f"<span class='doc-name'>👨‍⚕️ Dr. Clinical AI</span>" if doctor_name else ""
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title} — ClinicalAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  :root[data-theme="dark"]{{
+    --bg:#0f172a;--surface:#1e293b;--border:#334155;--text:#e2e8f0;
+    --text-muted:#94a3b8;--teal:#6ee7b7;--teal-btn:#10b981;--teal-hover:#059669;
+    --row-alt:#162032;--th-bg:#0f172a;--input-bg:#0a1120;
+    --alert-ok-bg:#14532d;--alert-ok-text:#86efac;
+    --alert-err-bg:#7f1d1d;--alert-err-text:#fca5a5;
+  }}
+  :root[data-theme="light"]{{
+    --bg:#f1f5f9;--surface:#ffffff;--border:#cbd5e1;--text:#0f172a;
+    --text-muted:#64748b;--teal:#0f766e;--teal-btn:#0f766e;--teal-hover:#0d9488;
+    --row-alt:#f8fafc;--th-bg:#e2e8f0;--input-bg:#f8fafc;
+    --alert-ok-bg:#dcfce7;--alert-ok-text:#166534;
+    --alert-err-bg:#fee2e2;--alert-err-text:#991b1b;
+  }}
   *{{box-sizing:border-box;margin:0;padding:0}}
-  body{{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}}
-  .navbar{{background:#1e293b;padding:1rem 2rem;display:flex;justify-content:space-between;
-           align-items:center;border-bottom:1px solid #334155}}
-  .navbar h1{{color:#6ee7b7;font-size:1.2rem;font-weight:700}}
-  .navbar a{{color:#94a3b8;text-decoration:none;margin-left:1.5rem;font-size:.9rem}}
-  .navbar a:hover{{color:#6ee7b7}}
-  .container{{max-width:1100px;margin:2rem auto;padding:0 1.5rem}}
-  .card{{background:#1e293b;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;
-         border:1px solid #334155}}
-  .card h2{{color:#6ee7b7;margin-bottom:1rem;font-size:1.1rem}}
-  input,select,textarea{{width:100%;padding:.6rem .8rem;background:#0f172a;border:1px solid #334155;
-    border-radius:6px;color:#e2e8f0;font-size:.9rem;margin-top:.3rem}}
-  input:focus,select:focus{{outline:none;border-color:#6ee7b7}}
-  .btn{{padding:.6rem 1.4rem;border:none;border-radius:6px;cursor:pointer;
-        font-size:.9rem;font-weight:600;transition:.2s}}
-  .btn-primary{{background:#10b981;color:#fff}}
-  .btn-primary:hover{{background:#059669}}
-  .btn-secondary{{background:#334155;color:#e2e8f0}}
+  body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.6}}
+  .navbar{{background:var(--surface);padding:1rem 2rem;display:flex;justify-content:space-between;
+           align-items:center;border-bottom:2px solid var(--teal);position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.3)}}
+  .navbar h1{{color:var(--teal);font-size:1.25rem;font-weight:700;letter-spacing:-.3px}}
+  .navbar a{{color:var(--text-muted);text-decoration:none;margin-left:1.5rem;font-size:.95rem;font-weight:500;transition:.15s}}
+  .navbar a:hover{{color:var(--teal)}}
+  .doc-name{{color:var(--teal);font-weight:600;font-size:.95rem}}
+  .theme-btn{{background:var(--surface);border:1px solid var(--border);color:var(--text);
+              padding:.35rem .8rem;border-radius:20px;cursor:pointer;font-size:.85rem;
+              margin-left:1rem;font-family:'Inter',sans-serif;font-weight:500;transition:.15s}}
+  .theme-btn:hover{{border-color:var(--teal);color:var(--teal)}}
+  .container{{max-width:1150px;margin:2rem auto;padding:0 1.5rem}}
+  .card{{background:var(--surface);border-radius:14px;padding:1.75rem;margin-bottom:1.5rem;
+         border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.15)}}
+  .card h2{{color:var(--teal);margin-bottom:1rem;font-size:1.15rem;font-weight:600}}
+  input,select,textarea{{width:100%;padding:.65rem .9rem;background:var(--input-bg);border:1px solid var(--border);
+    border-radius:8px;color:var(--text);font-size:.95rem;margin-top:.3rem;font-family:'Inter',sans-serif;transition:.15s}}
+  input:focus,select:focus{{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(110,231,183,.15)}}
+  .btn{{padding:.65rem 1.5rem;border:none;border-radius:8px;cursor:pointer;
+        font-size:.95rem;font-weight:600;transition:.2s;font-family:'Inter',sans-serif}}
+  .btn-primary{{background:var(--teal-btn);color:#fff}}
+  .btn-primary:hover{{background:var(--teal-hover);transform:translateY(-1px)}}
+  .btn-secondary{{background:var(--border);color:var(--text)}}
   .btn-danger{{background:#ef4444;color:#fff}}
-  .form-group{{margin-bottom:1rem}}
-  .form-group label{{font-size:.85rem;color:#94a3b8;display:block;margin-bottom:.2rem}}
-  .form-row{{display:grid;grid-template-columns:1fr 1fr;gap:1rem}}
-  .badge{{display:inline-block;padding:.2rem .6rem;border-radius:20px;font-size:.75rem;font-weight:600}}
+  .form-group{{margin-bottom:1.1rem}}
+  .form-group label{{font-size:.9rem;color:var(--text-muted);display:block;margin-bottom:.25rem;font-weight:500}}
+  .form-row{{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem}}
+  .badge{{display:inline-block;padding:.25rem .75rem;border-radius:20px;font-size:.8rem;font-weight:700;letter-spacing:.3px}}
   .badge-critical{{background:#7f1d1d;color:#fca5a5}}
   .badge-high{{background:#78350f;color:#fcd34d}}
   .badge-moderate{{background:#1e3a5f;color:#93c5fd}}
   .badge-low{{background:#14532d;color:#86efac}}
-  table{{width:100%;border-collapse:collapse;font-size:.9rem}}
-  th{{text-align:left;padding:.7rem 1rem;background:#0f172a;color:#64748b;font-size:.8rem;text-transform:uppercase}}
-  td{{padding:.7rem 1rem;border-bottom:1px solid #1e293b}}
-  tr:hover td{{background:#1e293b}}
-  .alert-success{{background:#14532d;color:#86efac;padding:.8rem 1rem;border-radius:8px;margin-bottom:1rem}}
-  .alert-error{{background:#7f1d1d;color:#fca5a5;padding:.8rem 1rem;border-radius:8px;margin-bottom:1rem}}
-  .risk-bar{{height:8px;border-radius:4px;background:#1e293b;margin-top:.4rem}}
-  .risk-fill{{height:100%;border-radius:4px}}
-  a{{color:#6ee7b7;text-decoration:none}}
+  table{{width:100%;border-collapse:collapse;font-size:.95rem}}
+  th{{text-align:left;padding:.8rem 1rem;background:var(--th-bg);color:var(--text-muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;font-weight:600}}
+  td{{padding:.8rem 1rem;border-bottom:1px solid var(--border);color:var(--text)}}
+  tr:hover td{{background:var(--row-alt)}}
+  .alert-success{{background:var(--alert-ok-bg);color:var(--alert-ok-text);padding:.9rem 1.1rem;border-radius:8px;margin-bottom:1rem;font-weight:500}}
+  .alert-error{{background:var(--alert-err-bg);color:var(--alert-err-text);padding:.9rem 1.1rem;border-radius:8px;margin-bottom:1rem;font-weight:500}}
+  .risk-bar{{height:10px;border-radius:5px;background:var(--border);margin-top:.5rem}}
+  .risk-fill{{height:100%;border-radius:5px}}
+  a{{color:var(--teal);text-decoration:none}}
   a:hover{{text-decoration:underline}}
+  code{{background:var(--th-bg);padding:.15rem .4rem;border-radius:4px;font-size:.85rem}}
 </style>
 </head>
 <body>
 <nav class="navbar">
   <h1>🏥 ClinicalAI — Decision Support</h1>
-  <div>{nav}
-    {"<a href='/dashboard'>Dashboard</a><a href='/register-patient'>Register Patient</a><a href='/logout'>Logout</a>" if doctor_name else ""}
+  <div style="display:flex;align-items:center">
+    {nav}
+    {"<a href='/dashboard'>Dashboard</a><a href='/about'>About</a><a href='/register-patient'>Register Patient</a><a href='/logout'>Logout</a>" if doctor_name else ""}
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-toggle">☀ Light</button>
   </div>
 </nav>
 <div class="container">
 {body}
 </div>
+<script>
+  const html = document.documentElement;
+  const btn = document.getElementById('theme-toggle');
+  const saved = localStorage.getItem('theme') || 'dark';
+  html.setAttribute('data-theme', saved);
+  btn.textContent = saved === 'dark' ? '☀ Light' : '🌙 Dark';
+  function toggleTheme(){{
+    const cur = html.getAttribute('data-theme');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    btn.textContent = next === 'dark' ? '☀ Light' : '🌙 Dark';
+  }}
+</script>
 </body>
 </html>"""
 
@@ -200,6 +237,78 @@ async def logout():
     resp.delete_cookie("session")
     return resp
 
+@app.get("/about", response_class=HTMLResponse)
+async def about_page(session: str | None = Cookie(default=None)):
+    doctor = require_doctor(session)
+    body = """
+    <div class="card">
+      <h2>🏥 About ClinicalAI</h2>
+      <p style="font-size:1.05rem;line-height:1.8;margin-bottom:1rem">
+        <strong>AI for Real-Time Clinical Decision Support in Under-Resourced Hospitals</strong><br>
+        A production-grade clinical AI system designed for tier-2 and tier-3 rural hospitals in India,
+        where specialist doctors are scarce and early disease detection saves lives.
+      </p>
+      <p style="color:var(--text-muted);line-height:1.8">
+        The system analyses patient vitals, lab reports, and clinical parameters across
+        <strong>11 disease categories</strong> using rule-based clinical scoring engines
+        grounded in published guidelines (qSOFA, HEART Score, ADA Criteria, JNC-8, WHO thresholds).
+        Every finding is explained in plain language so doctors can act immediately.
+      </p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem">
+      <div class="card" style="text-align:center">
+        <div style="font-size:2.5rem;margin-bottom:.5rem">11</div>
+        <div style="color:var(--teal);font-weight:600">Diseases Supported</div>
+        <div style="color:var(--text-muted);font-size:.9rem;margin-top:.5rem">
+          Sepsis · Diabetes · Heart Attack · Hypertension · Cancer · Respiratory ·
+          Cold & Flu · Anaemia · GI · Musculoskeletal · Skin
+        </div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:2.5rem;margin-bottom:.5rem">🔬</div>
+        <div style="color:var(--teal);font-weight:600">AI-Powered Analysis</div>
+        <div style="color:var(--text-muted);font-size:.9rem;margin-top:.5rem">
+          XGBoost · scispaCy NLP · SHAP Explainability · LangGraph Orchestration · FHIR R4
+        </div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:2.5rem;margin-bottom:.5rem">📋</div>
+        <div style="color:var(--teal);font-weight:600">DISHA Compliant</div>
+        <div style="color:var(--text-muted);font-size:.9rem;margin-top:.5rem">
+          Audit logs · Patient consent · Data stays local · Doctor override always available
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>👥 Project Team</h2>
+      <table>
+        <thead><tr><th>Name</th><th>Role</th><th>Institution</th></tr></thead>
+        <tbody>
+          <tr><td>Krathika</td><td>Lead Developer — AI & Backend</td><td>M.H. Saboo Siddik College of Engineering</td></tr>
+          <tr><td>Divya</td><td>Developer — NLP & Data Pipeline</td><td>M.H. Saboo Siddik College of Engineering</td></tr>
+          <tr><td>Grishma</td><td>Developer — Frontend & Integration</td><td>M.H. Saboo Siddik College of Engineering</td></tr>
+          <tr><td>Mr. Suraj Hindurao Chopade</td><td>Project Guide</td><td>M.H. Saboo Siddik College of Engineering</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>🏗 System Architecture</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem">
+        <div style="background:var(--bg);padding:1rem;border-radius:8px;border:1px solid var(--border)">
+          <div style="color:var(--teal);font-weight:600;margin-bottom:.5rem">Layer 1 — Ingestion</div>
+          <div style="color:var(--text-muted);font-size:.9rem">FHIR R4 patient bundles · LOINC-coded vitals · Clinical notes · Completeness validation</div>
+        </div>
+        <div style="background:var(--bg);padding:1rem;border-radius:8px;border:1px solid var(--border)">
+          <div style="color:var(--teal);font-weight:600;margin-bottom:.5rem">Layer 2 — AI Core</div>
+          <div style="color:var(--text-muted);font-size:.9rem">Disease-specific scoring · XGBoost models · scispaCy NLP · SHAP explainability · LangGraph agent</div>
+        </div>
+        <div style="background:var(--bg);padding:1rem;border-radius:8px;border:1px solid var(--border)">
+          <div style="color:var(--teal);font-weight:600;margin-bottom:.5rem">Layer 3 — Output</div>
+          <div style="color:var(--text-muted);font-size:.9rem">Risk level + score · Clinical findings · Treatment recommendations · PDF report · Audit trail</div>
+        </div>
+      </div>
+    </div>"""
+    return html(_base("About", body, doctor["full_name"]))
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
