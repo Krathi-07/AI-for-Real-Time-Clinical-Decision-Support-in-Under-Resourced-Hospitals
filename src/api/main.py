@@ -101,7 +101,9 @@ def _base(title: str, body: str, doctor_name: str = "") -> str:
     --alert-err-bg:#fee2e2;--alert-err-text:#991b1b;
   }}
   *{{box-sizing:border-box;margin:0;padding:0}}
-  body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.6}}
+  body{{font-family:'Times New Roman',Times,serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.6}}
+  input,select,textarea,button,.btn{{font-family:'Times New Roman',Times,serif}}
+  :root[data-theme='light']{{--text:#0a1510 !important;--text-muted:#1e4a30 !important;--bg:#eef6f1 !important;--surface:#ffffff !important;--border:#aacfbc !important;--input-bg:#f5fbf8 !important}}
   .navbar{{background:var(--surface);padding:1rem 2rem;display:flex;justify-content:space-between;
            align-items:center;border-bottom:2px solid var(--teal);position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.3)}}
   .navbar h1{{color:var(--teal);font-size:1.25rem;font-weight:700;letter-spacing:-.3px}}
@@ -196,7 +198,7 @@ async def login_page(error: str = ""):
     <div style="max-width:420px;margin:4rem auto">
       <div class="card">
         <h2>🔐 Doctor Login</h2>
-        <p style="color:#64748b;font-size:.85rem;margin-bottom:1.5rem">
+        <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.5rem">
           AI Clinical Decision Support System
         </p>
         {err_html}
@@ -236,19 +238,21 @@ async def logout():
     resp.delete_cookie("session")
     return resp
 
+# fix_about_done
+# fix_pills_done
 @app.get("/about", response_class=HTMLResponse)
 async def about_page(session: str | None = Cookie(default=None)):
     doctor = require_doctor(session)
     body = """
-    <div style="background:linear-gradient(135deg,#0f172a 0%,#0f2820 100%);border:1px solid #1f4035;border-radius:16px;padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden">
       <div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(16,185,129,0.12) 0%,transparent 70%);pointer-events:none"></div>
-      <div style="font-size:0.72rem;color:#6ee7b7;text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:12px">🎓 Research Project 2026 — MHSSCE</div>
-      <h1 style="font-size:1.9rem;font-weight:800;color:#e2e8f0;line-height:1.25;margin-bottom:14px">
+      <div style="font-size:0.72rem;color:var(--teal);text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:12px">🎓 Research Project 2026 — MHSSCE</div>
+      <h1 style="font-size:1.9rem;font-weight:800;color:var(--text);line-height:1.25;margin-bottom:14px">
         🏥 AI for Real-Time Clinical<br>Decision Support<br>
-        <span style="color:#6ee7b7">in Under-Resourced Hospitals</span>
+        <span style="color:var(--teal)">in Under-Resourced Hospitals</span>
       </h1>
-      <p style="color:#94a3b8;font-size:1rem;line-height:1.75;max-width:680px">
-        A <strong style="color:#e2e8f0">Virtual Junior Doctor</strong> that detects sepsis in real time,
+      <p style="color:var(--text-muted);font-size:1rem;line-height:1.75;max-width:680px">
+        A <strong style="color:var(--text)">Virtual Junior Doctor</strong> that detects sepsis in real time,
         explains every decision, and tells the attending doctor exactly what to do next —
         built for Tier-2 and Tier-3 hospitals in India where specialist doctors are scarce
         and early detection saves lives. 🩺
@@ -256,71 +260,71 @@ async def about_page(session: str | None = Cookie(default=None)):
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;margin-bottom:2rem">
-      <div style="background:linear-gradient(135deg,#111827,#0f1f35);border:1px solid #1e3a5f;border-radius:14px;padding:1.5rem;text-align:center">
-        <div style="font-size:2.2rem;font-weight:800;color:#6ee7b7">✅ 6</div>
-        <div style="font-size:0.72rem;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-top:6px;font-weight:700">Phases Completed</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;text-align:center">
+        <div style="font-size:2.2rem;font-weight:800;color:var(--teal)">✅ 6</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-top:6px;font-weight:700">Phases Completed</div>
       </div>
-      <div style="background:linear-gradient(135deg,#111827,#1a1035);border:1px solid #2d1b5e;border-radius:14px;padding:1.5rem;text-align:center">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;text-align:center">
         <div style="font-size:2.2rem;font-weight:800;color:#8b5cf6">🎯 0.965</div>
-        <div style="font-size:0.72rem;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-top:6px;font-weight:700">Federated AUC</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-top:6px;font-weight:700">Federated AUC</div>
       </div>
-      <div style="background:linear-gradient(135deg,#111827,#1f1506);border:1px solid #3d2a07;border-radius:14px;padding:1.5rem;text-align:center">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;text-align:center">
         <div style="font-size:2.2rem;font-weight:800;color:#f97316">🏥 3</div>
-        <div style="font-size:0.72rem;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-top:6px;font-weight:700">Hospitals Simulated</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-top:6px;font-weight:700">Hospitals Simulated</div>
       </div>
-      <div style="background:linear-gradient(135deg,#111827,#0f2820);border:1px solid #14532d;border-radius:14px;padding:1.5rem;text-align:center">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;text-align:center">
         <div style="font-size:2.2rem;font-weight:800;color:#22c55e">🛡 DISHA</div>
-        <div style="font-size:0.72rem;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-top:6px;font-weight:700">Compliance Ready</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-top:6px;font-weight:700">Compliance Ready</div>
       </div>
     </div>
 
     <div style="margin-bottom:2rem">
-      <div style="font-size:0.72rem;color:#6ee7b7;text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:8px">🏗 System Design</div>
-      <h2 style="font-size:1.5rem;font-weight:800;color:#e2e8f0;margin-bottom:8px">3-Layer Architecture</h2>
-      <p style="color:#64748b;font-size:0.95rem;margin-bottom:1.5rem">Every patient interaction flows through three layers — from raw hospital data to an actionable clinical treatment plan.</p>
+      <div style="font-size:0.72rem;color:var(--teal);text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:8px">🏗 System Design</div>
+      <h2 style="font-size:1.5rem;font-weight:800;color:var(--text);margin-bottom:8px">3-Layer Architecture</h2>
+      <p style="color:var(--text-muted);font-size:0.95rem;margin-bottom:1.5rem">Every patient interaction flows through three layers — from raw hospital data to an actionable clinical treatment plan.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
-        <div style="background:linear-gradient(135deg,#111827,#0f1f35);border:1px solid #1e3a5f;border-radius:14px;padding:1.5rem">
-          <div style="font-size:0.7rem;color:#6ee7b7;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px">Layer 1</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem">
+          <div style="font-size:0.7rem;color:var(--teal);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px">Layer 1</div>
           <div style="font-size:2rem;margin-bottom:10px">📥</div>
-          <div style="font-weight:800;color:#e2e8f0;margin-bottom:12px;font-size:1rem">Data Ingestion</div>
+          <div style="font-weight:800;color:var(--text);margin-bottom:12px;font-size:1rem">Data Ingestion</div>
           <ul style="list-style:none;padding:0">
-            <li style="font-size:0.84rem;color:#64748b;padding:4px 0 4px 16px;position:relative">
-              <span style="position:absolute;left:0;color:#6ee7b7;font-weight:700">→</span>FHIR R4 patient bundles</li>
-            <li style="font-size:0.84rem;color:#64748b;padding:4px 0 4px 16px;position:relative">
-              <span style="position:absolute;left:0;color:#6ee7b7;font-weight:700">→</span>LOINC-coded vitals and labs</li>
-            <li style="font-size:0.84rem;color:#64748b;padding:4px 0 4px 16px;position:relative">
-              <span style="position:absolute;left:0;color:#6ee7b7;font-weight:700">→</span>Clinical notes (free text)</li>
-            <li style="font-size:0.84rem;color:#64748b;padding:4px 0 4px 16px;position:relative">
-              <span style="position:absolute;left:0;color:#6ee7b7;font-weight:700">→</span>Completeness validation</li>
+            <li style="font-size:0.84rem;color:var(--text-muted);padding:4px 0 4px 16px;position:relative">
+              <span style="position:absolute;left:0;color:var(--teal);font-weight:700">→</span>FHIR R4 patient bundles</li>
+            <li style="font-size:0.84rem;color:var(--text-muted);padding:4px 0 4px 16px;position:relative">
+              <span style="position:absolute;left:0;color:var(--teal);font-weight:700">→</span>LOINC-coded vitals and labs</li>
+            <li style="font-size:0.84rem;color:var(--text-muted);padding:4px 0 4px 16px;position:relative">
+              <span style="position:absolute;left:0;color:var(--teal);font-weight:700">→</span>Clinical notes (free text)</li>
+            <li style="font-size:0.84rem;color:var(--text-muted);padding:4px 0 4px 16px;position:relative">
+              <span style="position:absolute;left:0;color:var(--teal);font-weight:700">→</span>Completeness validation</li>
           </ul>
         </div>
-        <div style="background:linear-gradient(135deg,#111827,#1a1035);border:1px solid #2d1b5e;border-radius:14px;padding:1.5rem">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem">
           <div style="font-size:0.7rem;color:#8b5cf6;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px">Layer 2</div>
           <div style="font-size:2rem;margin-bottom:10px">🤖</div>
-          <div style="font-weight:800;color:#e2e8f0;margin-bottom:12px;font-size:1rem">AI Core</div>
+          <div style="font-weight:800;color:var(--text);margin-bottom:12px;font-size:1rem">AI Core</div>
           <ul style="list-style:none;padding:0">
-            <li style="font-size:0.84rem;color:#64748b;padding:4px 0 4px 16px;position:relative">
+            <li style="font-size:0.84rem;color:var(--text-muted);padding:4px 0 4px 16px;position:relative">
               <span style="position:absolute;left:0;color:#8b5cf6;font-weight:700">→</span>XGBoost sepsis model + SHAP</li>
-            <li style="font-size:0.84rem;color:#64748b;padding:4px 0 4px 16px;position:relative">
+            <li style="font-size:0.84rem;color:var(--text-muted);padding:4px 0 4px 16px;position:relative">
               <span style="position:absolute;left:0;color:#8b5cf6;font-weight:700">→</span>scispaCy NLP (NER + negation)</li>
-            <li style="font-size:0.84rem;color:#64748b;padding:4px 0 4px 16px;position:relative">
+            <li style="font-size:0.84rem;color:var(--text-muted);padding:4px 0 4px 16px;position:relative">
               <span style="position:absolute;left:0;color:#8b5cf6;font-weight:700">→</span>Multimodal fusion engine</li>
-            <li style="font-size:0.84rem;color:#64748b;padding:4px 0 4px 16px;position:relative">
+            <li style="font-size:0.84rem;color:var(--text-muted);padding:4px 0 4px 16px;position:relative">
               <span style="position:absolute;left:0;color:#8b5cf6;font-weight:700">→</span>LangGraph agent orchestration</li>
           </ul>
         </div>
-        <div style="background:linear-gradient(135deg,#111827,#0f2820);border:1px solid #14532d;border-radius:14px;padding:1.5rem">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem">
           <div style="font-size:0.7rem;color:#22c55e;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px">Layer 3</div>
           <div style="font-size:2rem;margin-bottom:10px">📊</div>
-          <div style="font-weight:800;color:#e2e8f0;margin-bottom:12px;font-size:1rem">Clinical Output</div>
+          <div style="font-weight:800;color:var(--text);margin-bottom:12px;font-size:1rem">Clinical Output</div>
           <ul style="list-style:none;padding:0">
-            <li style="font-size:0.84rem;color:#64748b;padding:4px 0 4px 16px;position:relative">
+            <li style="font-size:0.84rem;color:var(--text-muted);padding:4px 0 4px 16px;position:relative">
               <span style="position:absolute;left:0;color:#22c55e;font-weight:700">→</span>Risk level + score + drivers</li>
-            <li style="font-size:0.84rem;color:#64748b;padding:4px 0 4px 16px;position:relative">
+            <li style="font-size:0.84rem;color:var(--text-muted);padding:4px 0 4px 16px;position:relative">
               <span style="position:absolute;left:0;color:#22c55e;font-weight:700">→</span>Treatment plan (immediate/urgent/routine)</li>
-            <li style="font-size:0.84rem;color:#64748b;padding:4px 0 4px 16px;position:relative">
+            <li style="font-size:0.84rem;color:var(--text-muted);padding:4px 0 4px 16px;position:relative">
               <span style="position:absolute;left:0;color:#22c55e;font-weight:700">→</span>Escalation triggers</li>
-            <li style="font-size:0.84rem;color:#64748b;padding:4px 0 4px 16px;position:relative">
+            <li style="font-size:0.84rem;color:var(--text-muted);padding:4px 0 4px 16px;position:relative">
               <span style="position:absolute;left:0;color:#22c55e;font-weight:700">→</span>HITL mandatory review flag</li>
           </ul>
         </div>
@@ -328,16 +332,16 @@ async def about_page(session: str | None = Cookie(default=None)):
     </div>
 
     <div style="margin-bottom:2rem">
-      <div style="font-size:0.72rem;color:#6ee7b7;text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:16px">⚙️ Tech Stack</div>
+      <div style="font-size:0.72rem;color:var(--teal);text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:16px">⚙️ Tech Stack</div>
       <div style="display:flex;flex-wrap:wrap;gap:10px">
-        <div style="background:#111827;border:1px solid #1f2937;border-radius:10px;padding:10px 16px;font-size:0.84rem;color:#64748b;display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">⚡</span><strong style="color:#e2e8f0">FastAPI</strong> REST API</div>
-        <div style="background:#111827;border:1px solid #1f2937;border-radius:10px;padding:10px 16px;font-size:0.84rem;color:#64748b;display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🔗</span><strong style="color:#e2e8f0">LangGraph</strong> Agent Orchestration</div>
-        <div style="background:#111827;border:1px solid #1f2937;border-radius:10px;padding:10px 16px;font-size:0.84rem;color:#64748b;display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🌲</span><strong style="color:#e2e8f0">XGBoost</strong> Sepsis Model</div>
-        <div style="background:#111827;border:1px solid #1f2937;border-radius:10px;padding:10px 16px;font-size:0.84rem;color:#64748b;display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🧠</span><strong style="color:#e2e8f0">scispaCy</strong> Clinical NLP</div>
-        <div style="background:#111827;border:1px solid #1f2937;border-radius:10px;padding:10px 16px;font-size:0.84rem;color:#64748b;display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🌸</span><strong style="color:#e2e8f0">Flower</strong> Federated Learning</div>
-        <div style="background:#111827;border:1px solid #1f2937;border-radius:10px;padding:10px 16px;font-size:0.84rem;color:#64748b;display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🏥</span><strong style="color:#e2e8f0">FHIR R4</strong> Healthcare Standard</div>
-        <div style="background:#111827;border:1px solid #1f2937;border-radius:10px;padding:10px 16px;font-size:0.84rem;color:#64748b;display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🔍</span><strong style="color:#e2e8f0">SHAP</strong> Explainable AI</div>
-        <div style="background:#111827;border:1px solid #1f2937;border-radius:10px;padding:10px 16px;font-size:0.84rem;color:#64748b;display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🛡</span><strong style="color:#e2e8f0">DISHA/HIPAA</strong> Compliance</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:0.84rem;color:var(--text-muted);display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">⚡</span><strong style="color:var(--text)">FastAPI</strong> REST API</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:0.84rem;color:var(--text-muted);display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🔗</span><strong style="color:var(--text)">LangGraph</strong> Agent Orchestration</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:0.84rem;color:var(--text-muted);display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🌲</span><strong style="color:var(--text)">XGBoost</strong> Sepsis Model</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:0.84rem;color:var(--text-muted);display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🧠</span><strong style="color:var(--text)">scispaCy</strong> Clinical NLP</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:0.84rem;color:var(--text-muted);display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🌸</span><strong style="color:var(--text)">Flower</strong> Federated Learning</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:0.84rem;color:var(--text-muted);display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🏥</span><strong style="color:var(--text)">FHIR R4</strong> Healthcare Standard</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:0.84rem;color:var(--text-muted);display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🔍</span><strong style="color:var(--text)">SHAP</strong> Explainable AI</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:0.84rem;color:var(--text-muted);display:flex;align-items:center;gap:8px"><span style="font-size:1.1rem">🛡</span><strong style="color:var(--text)">DISHA/HIPAA</strong> Compliance</div>
       </div>
     </div>
 
@@ -345,8 +349,8 @@ async def about_page(session: str | None = Cookie(default=None)):
     <div style="background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.25);border-radius:14px;padding:1.25rem 1.5rem;display:flex;align-items:center;gap:16px">
       <div style="font-size:2rem">🔒</div>
       <div>
-        <div style="font-weight:700;color:#e2e8f0;margin-bottom:4px">Privacy &amp; Compliance</div>
-        <div style="color:#64748b;font-size:0.87rem">
+        <div style="font-weight:700;color:var(--text);margin-bottom:4px">Privacy &amp; Compliance</div>
+        <div style="color:var(--text-muted);font-size:0.87rem">
           Patient data never leaves the hospital &nbsp;·&nbsp;
           Only gradient weights transmitted &nbsp;·&nbsp;
           ✅ Compliant with India DISHA and HIPAA
@@ -374,7 +378,7 @@ async def dashboard(session: str | None = Cookie(default=None)):
           <td>{p['age']} yrs / {p['gender']}</td>
           <td>{disease_name}</td>
           <td>{risk_badge}</td>
-          <td style="color:#64748b;font-size:.8rem">{p['registered_at'][:16]}</td>
+          <td style="color:var(--text-muted);font-size:.8rem">{p['registered_at'][:16]}</td>
           <td>
             <a href="/analyse/{p['patient_id']}">
               <button class="btn btn-primary" style="padding:.3rem .8rem;font-size:.8rem">Analyse</button>
@@ -387,8 +391,8 @@ async def dashboard(session: str | None = Cookie(default=None)):
     body = f"""
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
       <div>
-        <h2 style="color:#e2e8f0;font-size:1.4rem">🩺 Welcome, Dr. Clinical AI</h2>
-        <p style="color:#64748b">{doctor['hospital']} · {len(patients)} patient(s) registered</p>
+        <h2 style="color:var(--text);font-size:1.4rem">🩺 Welcome, Dr. Clinical AI</h2>
+        <p style="color:var(--text-muted)">{doctor['hospital']} · {len(patients)} patient(s) registered</p>
       </div>
       <a href="/register-patient">
         <button class="btn btn-primary">+ Register Patient</button>
@@ -515,14 +519,14 @@ async def analyse_page(patient_id: str, session: str | None = Cookie(default=Non
     <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem">
       <a href="/dashboard">← Dashboard</a>
       <span style="color:#475569"> / </span>
-      <span style="color:#e2e8f0">{patient['full_name']}</span>
+      <span style="color:var(--text)">{patient['full_name']}</span>
     </div>
     <div class="card">
       <h2>🔬 Clinical Analysis — {disease.name}</h2>
-      <div style="color:#64748b;font-size:.85rem;margin-bottom:1.2rem">
-        Patient: <strong style="color:#e2e8f0">{patient['full_name']}</strong> ·
-        Age: <strong style="color:#e2e8f0">{patient['age']}</strong> ·
-        ID: <code style="color:#6ee7b7">{patient_id}</code>
+      <div style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.2rem">
+        Patient: <strong style="color:var(--text)">{patient['full_name']}</strong> ·
+        Age: <strong style="color:var(--text)">{patient['age']}</strong> ·
+        ID: <code style="color:var(--teal)">{patient_id}</code>
       </div>
       <form method="post" action="/analyse/{patient_id}">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1.5rem">
@@ -603,7 +607,7 @@ async def result_page(analysis_id: int, session: str | None = Cookie(default=Non
     findings_html = "".join(f"<li style='margin:.4rem 0;color:#fcd34d'>⚠ {f}</li>" for f in findings)
     recs_html = "".join(f"<li style='margin:.4rem 0;color:#86efac'>→ {r}</li>" for r in recs)
     params_html = "".join(
-        f"<tr><td style='color:#94a3b8'>{k.replace('_',' ').title()}</td><td style='color:#e2e8f0'>{v}</td></tr>"
+        f"<tr><td style='color:var(--text-muted)'>{k.replace('_',' ').title()}</td><td style='color:var(--text)'>{v}</td></tr>"
         for k, v in params.items()
     )
 
@@ -620,15 +624,15 @@ async def result_page(analysis_id: int, session: str | None = Cookie(default=Non
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
           <h2>{DISEASES[row['disease_id']].name} — Analysis Result</h2>
-          <p style="color:#64748b;font-size:.85rem;margin-top:.3rem">
+          <p style="color:var(--text-muted);font-size:.85rem;margin-top:.3rem">
             {patient['full_name']} · Age {patient['age']} · {patient['gender']} ·
-            <code style="color:#6ee7b7">{row['patient_id']}</code>
+            <code style="color:var(--teal)">{row['patient_id']}</code>
           </p>
         </div>
         {_badge(row['risk_level'])}
       </div>
       <div style="margin:1.2rem 0">
-        <div style="display:flex;justify-content:space-between;font-size:.85rem;color:#94a3b8;margin-bottom:.3rem">
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;color:var(--text-muted);margin-bottom:.3rem">
           <span>Risk Score</span><span style="color:{fill_color};font-weight:700">{pct}%</span>
         </div>
         <div class="risk-bar">
@@ -678,7 +682,7 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
     for a in analyses:
         pct = int(a["risk_score"] * 100)
         rows += f"""<tr>
-          <td style="color:#64748b;font-size:.8rem">{a['created_at'][:16]}</td>
+          <td style="color:var(--text-muted);font-size:.8rem">{a['created_at'][:16]}</td>
           <td>{DISEASES.get(a['disease_id'], type('x',(),{'name':a['disease_id']})()).name}</td>
           <td>{_badge(a['risk_level'])} {pct}%</td>
           <td><a href="/result/{a['id']}">View</a> &nbsp;
@@ -692,12 +696,12 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <h2>{patient['full_name']}</h2>
-          <p style="color:#64748b;font-size:.85rem;margin-top:.3rem">
-            ID: <code style="color:#6ee7b7">{patient_id}</code> ·
+          <p style="color:var(--text-muted);font-size:.85rem;margin-top:.3rem">
+            ID: <code style="color:var(--teal)">{patient_id}</code> ·
             Age: {patient['age']} · {patient['gender']} ·
             Condition: {disease_name}
           </p>
-          <p style="color:#64748b;font-size:.85rem">
+          <p style="color:var(--text-muted);font-size:.85rem">
             📞 {patient.get('phone') or '—'} &nbsp;|&nbsp;
             📍 {patient.get('address') or '—'}
           </p>

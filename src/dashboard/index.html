@@ -6,6 +6,42 @@
 <title>AI Clinical Decision Support | Virtual Junior Doctor</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+    /* ── Times New Roman everywhere ── */
+    * { box-sizing: border-box; }
+    body, input, button, select, textarea {
+      font-family: 'Times New Roman', Times, serif !important;
+    }
+
+    /* ── Light-mode high-contrast fix ── */
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg:         #f0f7f4 !important;
+        --surface:    #ffffff !important;
+        --surface2:   #f5fbf8 !important;
+        --border:     #b8d8c8 !important;
+        --text:       #0a1a10 !important;
+        --text-muted: #2e5e42 !important;
+        --green:      #007a55 !important;
+      }
+      body { color: #0a1a10 !important; }
+      p, span, td, th, li, label { color: #1a2e22 !important; }
+      h1, h2, h3, h4 { color: #0a1a10 !important; }
+      .text-muted, [class*="muted"] { color: #3a6b52 !important; }
+      .card, [class*="card"], [style*="background: var(--surface)"] {
+        background: #ffffff !important;
+        box-shadow: 0 2px 12px rgba(0,0,0,.1) !important;
+      }
+      input, select, textarea {
+        background: #f5fbf8 !important;
+        color: #0a1a10 !important;
+        border-color: #b8d8c8 !important;
+      }
+      .badge, [class*="badge"] {
+        color: #1a4a2e !important;
+        background: #e0f2ea !important;
+      }
+    }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
   --bg: #0a0d14; --card: #111827; --card2: #1a2035;
