@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+content = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -832,4 +832,9 @@ loadAudit();
 setInterval(loadAudit, 10000);
 </script>
 </body>
-</html>
+</html>"""
+
+with open("src/dashboard/index.html", "w", encoding="utf-8") as f:
+    f.write(content)
+
+print("SUCCESS: src/dashboard/index.html written.")
