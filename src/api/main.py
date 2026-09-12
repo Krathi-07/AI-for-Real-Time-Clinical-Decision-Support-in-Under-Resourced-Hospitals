@@ -2,15 +2,15 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request, Form
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, HTMLResponse
+from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from itsdangerous import URLSafeTimedSerializer, BadSignature
+from itsdangerous import BadSignature, URLSafeTimedSerializer
 
 from src.agent.graph import build_graph
 from src.agent.state import AgentState
@@ -259,12 +259,19 @@ def download_report(patient_id: str, request: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Login required.")
 
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import cm
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
     import tempfile
+
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import cm
+    from reportlab.platypus import (
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
 
     records = request.app.state.audit_logger.tail(50)
     record = next((r for r in reversed(records) if r.get("patient_id") == patient_id), None)

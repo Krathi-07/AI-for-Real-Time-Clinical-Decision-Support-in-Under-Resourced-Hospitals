@@ -1,8 +1,7 @@
 ﻿from __future__ import annotations
 
 import json
-import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -15,7 +14,7 @@ class AuditLogger:
 
     def log(self, snapshot, source: str = "unknown") -> None:
         record = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "source": source,
             "patient_id": getattr(snapshot, "patient_id", "unknown"),
             "risk_level": getattr(snapshot, "risk_level", "unknown"),

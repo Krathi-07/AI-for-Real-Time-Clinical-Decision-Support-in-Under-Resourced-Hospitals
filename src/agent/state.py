@@ -6,8 +6,7 @@ Think of this as the agent's notepad. Each node reads what it needs,
 adds its findings, and passes the updated state to the next node.
 """
 
-from typing import TypedDict, Optional
-from dataclasses import dataclass, field
+from typing import TypedDict
 
 
 class AgentState(TypedDict):

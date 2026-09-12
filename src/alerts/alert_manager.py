@@ -3,7 +3,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ class AlertManager:
             return
 
         alert = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "channel": type(self._channels[0]).__name__ if self._channels else "none",
             "patient_id": getattr(snapshot, "patient_id", "unknown"),
             "risk_level": risk_level,

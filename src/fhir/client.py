@@ -10,7 +10,6 @@ Why this exists:
 import requests
 from requests.exceptions import RequestException
 
-
 # Free public FHIR R4 test server — use this for all development
 # In production, this becomes the hospital's actual FHIR server URL
 FHIR_BASE_URL = "https://hapi.fhir.org/baseR4"

@@ -10,7 +10,7 @@ without any changes — only the schemas know about HTTP.
 """
 
 from __future__ import annotations
-from typing import Optional
+
 from pydantic import BaseModel, Field
 
 

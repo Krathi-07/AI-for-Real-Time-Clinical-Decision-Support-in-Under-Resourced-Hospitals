@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "clinical-ai-decision-support"
 version = "0.1.0"
 description = "Virtual junior doctor AI for under-resourced hospitals"
@@ -18,4 +18,9 @@ dependencies = [
     "spacy==3.7.5",
     "uvicorn>=0.30.0",
     "xgboost==1.7.6",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.7",
 ]

@@ -1,14 +1,19 @@
 ﻿from __future__ import annotations
 
 import io
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    HRFlowable,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
 )
 
 RISK_COLOURS = {
@@ -46,7 +51,7 @@ def build_pdf(payload: dict) -> bytes:
     )))
     story.append(Paragraph(
         f"Patient Risk Assessment Report - "
-        f"Generated {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
+        f"Generated {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}",
         ParagraphStyle("sub", parent=styles["Normal"], fontSize=10,
                        textColor=colors.HexColor("#64748b"), spaceAfter=8),
     ))
