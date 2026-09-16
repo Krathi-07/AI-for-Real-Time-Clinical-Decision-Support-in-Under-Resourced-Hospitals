@@ -814,3 +814,27 @@ All pages working. Server running on localhost:8000.
 - FastAPI: separate `Request` object from Pydantic schema in endpoint signatures
 - `AgentState` must be explicitly imported in nodes.py
 
+## Next Session — Tier Upgrades (Job-Level Features)
+
+### Tier 1 (Quick Wins)
+- [ ] Live dashboard stats (total patients, CRITICAL count, risk chart)
+- [ ] Patient search & filter
+- [ ] Deploy to Render
+
+### Tier 2 (Impressive)
+- [ ] Free-text clinical notes → AI analysis (uses scispaCy)
+- [ ] Patient risk trend chart across visits
+- [ ] Hindi / Regional language toggle
+
+### Tier 3 (National / Job Level)
+- [ ] Voice input for vitals (Web Speech API)
+- [ ] PWA — works offline on mobile
+- [ ] LLM chat "Ask Dr. AI" (Groq free API)
+
+### Current State
+All pages working on localhost:8000.
+Theme: Clinical Navy, Font: Inter, Login: split layout.
+DB: SQLite at data/clinical.db
+Main file: src/api/main.py
+All 6 phases complete.
+
