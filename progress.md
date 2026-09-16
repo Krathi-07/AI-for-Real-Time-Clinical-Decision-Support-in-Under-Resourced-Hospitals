@@ -707,3 +707,110 @@ Musculoskeletal, Skin Infection
 - [ ] Font upgrade (Inter/Poppins)
 - [ ] Deploy to Render
 - [ ] Update README
+
+## Session — 2026-09-12
+
+### Completed
+- Dark/light theme toggle with Inter font
+- "Dr. Clinical AI" branding everywhere (navbar, welcome, PDF report)
+- About page fully redesigned (hero banner, stat boxes, 3-layer arch cards, tech stack, privacy note)
+- Team section removed from About page
+- index.html enriched with emojis, coloured section accents, coloured arch cards
+- All helper scripts cleaned up
+
+### Current state
+All pages working. Server running on localhost:8000.
+
+### Next session
+- Any remaining UI polish
+- Mobile responsiveness
+- Final review before submission
+
+# PROGRESS.md — AI Clinical Decision Support
+
+## Project: AI for Real-Time Clinical Decision Support in Under-Resourced Hospitals
+**Team:** Krathika (AI & Backend), Divya (NLP & Data Pipeline), Grishma (Frontend & Integration)
+**Guide:** Mr. Suraj Chopade
+
+---
+
+## Completed Phases
+
+### Phase 1 — FHIR Ingestion ✅
+- Patient data ingestion via FHIR-compatible JSON format
+
+### Phase 2 — XGBoost Sepsis Model ✅
+- Trained XGBoost classifier with SHAP explainability
+- Fixed XGBoost 2.x SHAP output (single array, not list)
+- pulse_pressure computed before model.predict()
+
+### Phase 3 — scispaCy NLP ✅
+- Medical entity extraction with en_ner_bc5cdr_md
+
+### Phase 4 — Multimodal Fusion ✅
+- Combined structured vitals + NLP signals
+
+### Phase 5 — FastAPI + LangGraph Agent ✅
+- REST API with LangGraph decision graph
+- Treatment recommendations (Surviving Sepsis Campaign 2021)
+- Login system (doctor / clinical2026)
+- PDF report generation
+
+### Phase 6 — Federated Learning + Alert System ✅
+- Flower-based federated learning setup
+- Alert system wired into agent
+
+---
+
+## UI & Dashboard ✅
+
+- Multi-page dashboard: /about, /demo, /federated, /audit-page
+- Dark/light theme toggle with localStorage persistence
+- Inter font throughout
+- "Dr. Clinical AI" branding (navbar, welcome, PDF report)
+- About page: hero banner, stat boxes, 3-layer architecture cards, tech stack, privacy note
+- index.html: emojis, coloured section accents, coloured architecture cards
+- Audit log table pulling from /audit API endpoint
+- Demo page with preset scenarios and 5-step demo flow
+- All helper/cleanup scripts removed from repo
+
+---
+
+## Presentation ✅
+
+- 13-slide PowerPoint deck generated via pptxgenjs
+- Microsoft/LinkedIn/MoSDE/edunet/SAP branding
+- Blue diagonal design matching internship template
+
+---
+
+## Session — 2026-09-12
+
+### Completed
+- Dark/light theme toggle with Inter font
+- "Dr. Clinical AI" branding everywhere (navbar, welcome, PDF report)
+- About page fully redesigned (hero banner, stat boxes, 3-layer arch cards, tech stack, privacy note)
+- Team section removed from About page
+- index.html enriched with emojis, coloured section accents, coloured arch cards
+- All helper scripts cleaned up
+
+### Current State
+All pages working. Server running on localhost:8000.
+
+---
+
+## Pending
+
+- [ ] Mobile responsiveness (deferred, optional)
+- [ ] Update README
+- [ ] Any remaining UI polish
+
+---
+
+## Known Gotchas
+- PowerShell corrupts JS template literals — always use Python scripts for file writes
+- XGBoost 2.x SHAP: use `sv[1][0] if isinstance(sv, list) else sv[0]`
+- Always compute `pulse_pressure` before `model.predict()` in nodes.py
+- FastAPI: separate `Request` object from Pydantic schema in endpoint signatures
+- `AgentState` must be explicitly imported in nodes.py
+
