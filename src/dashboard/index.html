@@ -594,6 +594,18 @@ footer a:hover { text-decoration: underline; }
 </footer>
 
 <script>
+  async function loadStats() {
+  try {
+    var res = await fetch("/stats");
+    if (!res.ok) return;
+    var d = await res.json();
+    document.getElementById("stat-total").textContent = d.total_analysed;
+    document.getElementById("stat-critical").textContent = d.critical_count;
+    document.getElementById("stat-high").textContent = d.high_count;
+  } catch(e) {}
+}
+loadStats();
+setInterval(loadStats, 30000);
 var PRESETS = {
   sepsis: {
     heart_rate:118, systolic_bp:88, diastolic_bp:55, respiratory_rate:24,

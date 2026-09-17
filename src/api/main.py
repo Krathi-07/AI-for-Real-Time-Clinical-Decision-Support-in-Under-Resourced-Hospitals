@@ -825,9 +825,27 @@ async def dashboard(session: str | None = Cookie(default=None)):
       <a href="/register-patient">
         <button class="btn btn-primary">+ Register Patient</button>
       </a>
-    </div>
-    <div class="card">
-      <h2>Your Patients</h2>
+            </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;">
+          <div class="card" style="text-align:center;padding:1.2rem;">
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🔬 Patients Analysed</div>
+            <div id="stat-total" style="font-size:2rem;font-weight:800;color:var(--accent);">--</div>
+          </div>
+          <div class="card" style="text-align:center;padding:1.2rem;">
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🚨 Critical Alerts</div>
+            <div id="stat-critical" style="font-size:2rem;font-weight:800;color:#ef4444;">--</div>
+          </div>
+          <div class="card" style="text-align:center;padding:1.2rem;">
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">⚠️ High Risk</div>
+            <div id="stat-high" style="font-size:2rem;font-weight:800;color:#f97316;">--</div>
+          </div>
+          <div class="card" style="text-align:center;padding:1.2rem;">
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🏥 Registered Patients</div>
+            <div style="font-size:2rem;font-weight:800;color:var(--accent);">{len(patients)}</div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Your Patients</h2>
       <table>
         <thead><tr>
           <th>Patient ID</th><th>Name</th><th>Age / Gender</th>
@@ -836,6 +854,23 @@ async def dashboard(session: str | None = Cookie(default=None)):
         <tbody>{rows}{empty}</tbody>
       </table>
     </div>"""
+    body += """<script>
+  async function loadStats(){
+  try{
+    var r=await fetch("/stats");
+    if(!r.ok)return;
+    var d=await r.json();
+    var t=document.getElementById("stat-total");
+    var c=document.getElementById("stat-critical");
+    var h=document.getElementById("stat-high");
+    if(t)t.textContent=d.total_analysed;
+    if(c)c.textContent=d.critical_count;
+    if(h)h.textContent=d.high_count;
+  }catch(e){}
+}
+loadStats();
+setInterval(loadStats,30000);
+</script>"""
     return html(_base("Dashboard", body, doctor["full_name"]))
 
 
@@ -1361,3 +1396,33 @@ async def download_report(analysis_id: int, session: str | None = Cookie(default
     from fastapi.responses import StreamingResponse
     return StreamingResponse(buffer, media_type="application/pdf",
                              headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+# ── Live Stats ─────────────────────────────────────────────────────────────────
+
+@app.get("/stats")
+def get_stats(session: str | None = Cookie(default=None)):
+    require_doctor(session)
+    import sqlite3
+    from datetime import datetime
+    db_path = "data/clinical.db"
+    try:
+        con = sqlite3.connect(db_path)
+        con.row_factory = sqlite3.Row
+        cur = con.cursor()
+        cur.execute("SELECT risk_level, risk_score FROM analyses")
+        rows = cur.fetchall()
+        con.close()
+    except Exception:
+        rows = []
+    total    = len(rows)
+    critical = sum(1 for r in rows if r["risk_level"] == "CRITICAL")
+    high     = sum(1 for r in rows if r["risk_level"] == "HIGH")
+    scores   = [r["risk_score"] for r in rows if r["risk_score"] is not None]
+    avg_score = round(sum(scores) / len(scores), 3) if scores else 0.0
+    return {
+        "total_analysed": total,
+        "critical_count": critical,
+        "high_count":     high,
+        "avg_risk_score": avg_score,
+        "last_updated":   datetime.now(UTC).isoformat(),
+    }
