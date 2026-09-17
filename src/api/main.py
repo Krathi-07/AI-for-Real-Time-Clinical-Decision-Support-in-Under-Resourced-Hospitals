@@ -844,18 +844,24 @@ async def dashboard(session: str | None = Cookie(default=None)):
             <div style="font-size:2rem;font-weight:800;color:var(--accent);">{len(patients)}</div>
           </div>
         </div>
-        <div class="card">
+                <div class="card">
           <h2>Your Patients</h2>
-      <table>
+          <div style="margin-bottom:1rem;">
+            <input id="patient-search" type="text" placeholder="🔍 Search by name, ID or condition..."
+              style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);
+              background:var(--surface);color:var(--text);font-size:0.9rem;outline:none;"
+              oninput="filterPatients(this.value)">
+          </div>
+          <table>
         <thead><tr>
           <th>Patient ID</th><th>Name</th><th>Age / Gender</th>
           <th>Condition</th><th>Last Risk</th><th>Registered</th><th>Action</th>
         </tr></thead>
-        <tbody>{rows}{empty}</tbody>
+        <tbody id="patient-table">{rows}{empty}</tbody>
       </table>
     </div>"""
     body += """<script>
-  async function loadStats(){
+async function loadStats(){
   try{
     var r=await fetch("/stats");
     if(!r.ok)return;
@@ -870,6 +876,14 @@ async def dashboard(session: str | None = Cookie(default=None)):
 }
 loadStats();
 setInterval(loadStats,30000);
+
+function filterPatients(q){
+  q=q.toLowerCase();
+  var rows=document.querySelectorAll("#patient-table tr");
+  rows.forEach(function(row){
+    row.style.display=row.textContent.toLowerCase().includes(q)?"":"none";
+  });
+}
 </script>"""
     return html(_base("Dashboard", body, doctor["full_name"]))
 
