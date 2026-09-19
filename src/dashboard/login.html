@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -225,7 +225,7 @@
 <script>
   document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
-  function doLogin() {
+  async function doLogin() {
     const u = document.getElementById('username').value.trim();
     const p = document.getElementById('password').value.trim();
     const err = document.getElementById('errorMsg');
@@ -237,10 +237,15 @@
       return;
     }
 
-    const USERS = { 'admin':'admin123', 'doctor':'doctor123', 'dr.sharma':'clinic2026' };
+    const body = new URLSearchParams({ username: u, password: p });
+    const res = await fetch('/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+      redirect: 'follow',
+    });
 
-    if (USERS[u] === p) {
-      err.classList.remove('show');
+    if (res.ok && res.url.includes('/dashboard')) {
       window.location.href = '/dashboard';
     } else {
       errTxt.textContent = 'Invalid credentials. Please try again.';
