@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # write_login.py
 
 content = '''<!DOCTYPE html>
@@ -40,7 +41,9 @@ content = '''<!DOCTYPE html>
       padding: 3rem 3.5rem;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
       position: relative;
       overflow: hidden;
     }
@@ -242,10 +245,10 @@ content = '''<!DOCTYPE html>
   </style>
 </head>
 <body>
-
+<button style="position:fixed;top:1rem;right:1rem;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:#a78bfa;padding:.35rem .85rem;border-radius:20px;font-size:.78rem;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;z-index:100" onclick="toggleTheme()" id="themeBtn">&#9728; Light</button>
 <!-- Left panel -->
 <div class="left">
-  <div>
+  <div style="position:relative;z-index:1;width:100%">
     <div class="badge">MHSSCE &middot; Research 2026</div>
     <h1>AI Clinical<br><span>Decision</span><br>Support</h1>
     <p class="subtitle">Virtual Junior Doctor for Tier-2/3 Hospitals</p>
@@ -315,6 +318,23 @@ content = '''<!DOCTYPE html>
 </div>
 
 <script>
+  (function() {
+    var t = localStorage.getItem("theme") ||
+      (window.matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", t);
+    document.addEventListener("DOMContentLoaded", function() {
+      var btn = document.getElementById("themeBtn");
+      if (btn) btn.textContent = t === "dark" ? "☀ Light" : "🌙 Dark";
+    });
+  })();
+
+  function toggleTheme() {
+    var t = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", t);
+    localStorage.setItem("theme", t);
+    var btn = document.getElementById("themeBtn");
+    if (btn) btn.textContent = t === "dark" ? "☀ Light" : "🌙 Dark";
+  }
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') doLogin();
   });
@@ -354,7 +374,6 @@ content = '''<!DOCTYPE html>
 </script>
 </body>
 </html>'''
-
-with open("src/dashboard/login.html", "w", encoding="utf-8") as f:
+with open("src/dashboard/login.html", "w", encoding="utf-8", errors="xmlcharrefreplace") as f:
     f.write(content)
 print("SUCCESS: Midnight Slate split login page written.")
