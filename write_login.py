@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+# write_login.py
+
+content = '''<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -351,4 +353,8 @@
   }
 </script>
 </body>
-</html>
+</html>'''
+
+with open("src/dashboard/login.html", "w", encoding="utf-8") as f:
+    f.write(content)
+print("SUCCESS: Midnight Slate split login page written.")
