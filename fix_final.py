@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # fix_final.py
 
 with open("src/api/main.py", "r", encoding="utf-8", errors="replace") as f:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # write_login.py
 
 content = '''<!DOCTYPE html>

@@ -86,86 +86,108 @@ def _base(title: str, body: str, doctor_name: str = "") -> str:
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title} — ClinicalAI</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
   :root{{
-    --navy-950:#060d1f;--navy-900:#0a1628;--navy-800:#0f2044;--navy-700:#1a3160;
-    --blue-500:#3b82f6;--blue-400:#60a5fa;--blue-300:#93c5fd;
-    --text:#e8edf5;--text-muted:#8fa3c0;--border:#1e3358;
+    --bg:#0c0e1a;--surface:#111322;--surface2:#1a1d30;--surface3:#252840;
+    --violet:#7c3aed;--violet-dim:#6d28d9;--violet-lit:#a78bfa;--violet-glow:rgba(124,58,237,.15);
+    --text:#e2e4f0;--text-muted:#8b90b0;--text-dark:#0f1035;--border:#2a2d45;
     --success:#10b981;--warning:#f59e0b;--danger:#ef4444;
   }}
   *{{box-sizing:border-box;margin:0;padding:0}}
-  body{{font-family:'Inter',sans-serif;background:var(--navy-950);color:var(--text);min-height:100vh}}
-  .navbar{{background:var(--navy-900);padding:1rem 2rem;display:flex;justify-content:space-between;
+  body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}}
+  .navbar{{background:var(--surface);padding:1rem 2rem;display:flex;justify-content:space-between;
            align-items:center;border-bottom:1px solid var(--border);
-           box-shadow:0 1px 12px rgba(59,130,246,.08)}}
-  .navbar h1{{color:var(--blue-400);font-size:1.2rem;font-weight:700;letter-spacing:-.01em}}
+           box-shadow:0 1px 20px rgba(124,58,237,.1)}}
+  .navbar h1{{color:var(--violet-lit);font-size:1.2rem;font-weight:800;letter-spacing:-.01em}}
   .navbar a{{color:var(--text-muted);text-decoration:none;margin-left:1.5rem;font-size:.9rem;
              font-weight:500;transition:color .15s}}
-  .navbar a:hover{{color:var(--blue-400)}}
+  .navbar a:hover{{color:var(--violet-lit)}}
   .container{{max-width:1100px;margin:2rem auto;padding:0 1.5rem}}
-  .card{{background:var(--navy-900);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;
-         border:1px solid var(--border);box-shadow:0 2px 16px rgba(0,0,0,.3)}}
-  .card h2{{color:var(--blue-400);margin-bottom:1rem;font-size:1.1rem;font-weight:700}}
-  input,select,textarea{{width:100%;padding:.6rem .8rem;background:var(--navy-800);
-    border:1px solid var(--border);border-radius:6px;color:var(--text);
+  .card{{background:var(--surface);border-radius:14px;padding:1.5rem;margin-bottom:1.5rem;
+         border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,.3)}}
+  .card h2{{color:var(--violet-lit);margin-bottom:1rem;font-size:1.1rem;font-weight:700}}
+  input,select,textarea{{width:100%;padding:.6rem .8rem;background:var(--surface2);
+    border:1px solid var(--border);border-radius:8px;color:var(--text);
     font-size:.9rem;margin-top:.3rem;font-family:'Inter',sans-serif}}
-  input:focus,select:focus{{outline:none;border-color:var(--blue-500);
-    box-shadow:0 0 0 3px rgba(59,130,246,.15)}}
-  .btn{{padding:.6rem 1.4rem;border:none;border-radius:6px;cursor:pointer;
+  input:focus,select:focus{{outline:none;border-color:var(--violet);
+    box-shadow:0 0 0 3px var(--violet-glow)}}
+  .btn{{padding:.6rem 1.4rem;border:none;border-radius:8px;cursor:pointer;
         font-size:.9rem;font-weight:600;transition:.2s;font-family:'Inter',sans-serif}}
-  .btn-primary{{background:var(--blue-500);color:#fff}}
-  .btn-primary:hover{{background:#2563eb}}
-  .btn-secondary{{background:var(--navy-700);color:var(--text)}}
-  .btn-secondary:hover{{background:var(--navy-800)}}
+  .btn-primary{{background:linear-gradient(135deg,var(--violet),var(--violet-dim));color:#fff}}
+  .btn-primary:hover{{opacity:.9;transform:translateY(-1px)}}
+  .btn-secondary{{background:var(--surface3);color:var(--text)}}
+  .btn-secondary:hover{{background:var(--surface2)}}
   .btn-danger{{background:var(--danger);color:#fff}}
   .form-group{{margin-bottom:1rem}}
   .form-group label{{font-size:.85rem;color:var(--text-muted);display:block;
     margin-bottom:.2rem;font-weight:500}}
   .form-row{{display:grid;grid-template-columns:1fr 1fr;gap:1rem}}
-  .badge{{display:inline-block;padding:.2rem .7rem;border-radius:20px;
+  .badge{{display:inline-block;padding:.25rem .7rem;border-radius:20px;
     font-size:.75rem;font-weight:700;letter-spacing:.02em}}
-  .badge-critical{{background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}}
-  .badge-high{{background:rgba(245,158,11,.2);color:#fcd34d;border:1px solid rgba(245,158,11,.3)}}
-  .badge-moderate{{background:rgba(59,130,246,.2);color:#93c5fd;border:1px solid rgba(59,130,246,.3)}}
-  .badge-low{{background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.3)}}
+  .badge-critical{{background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.4)}}
+  .badge-high{{background:rgba(245,158,11,.2);color:#fcd34d;border:1px solid rgba(245,158,11,.4)}}
+  .badge-moderate{{background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.4)}}
+  .badge-low{{background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.4)}}
   table{{width:100%;border-collapse:collapse;font-size:.9rem}}
-  th{{text-align:left;padding:.7rem 1rem;background:var(--navy-950);color:var(--text-muted);
-     font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600}}
-  td{{padding:.7rem 1rem;border-bottom:1px solid var(--border)}}
-  tr:hover td{{background:var(--navy-800)}}
+  th{{text-align:left;padding:.8rem 1rem;background:var(--bg);color:var(--text-muted);
+     font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600}}
+  td{{padding:.8rem 1rem;border-bottom:1px solid var(--border);color:var(--text)}}
+  tr:hover td{{background:var(--surface2)}}
   .alert-success{{background:rgba(16,185,129,.15);color:#6ee7b7;padding:.8rem 1rem;
     border-radius:8px;margin-bottom:1rem;border:1px solid rgba(16,185,129,.3)}}
   .alert-error{{background:rgba(239,68,68,.15);color:#fca5a5;padding:.8rem 1rem;
     border-radius:8px;margin-bottom:1rem;border:1px solid rgba(239,68,68,.3)}}
-  .risk-bar{{height:8px;border-radius:4px;background:var(--navy-800);margin-top:.4rem}}
-  .risk-fill{{height:100%;border-radius:4px}}
-  a{{color:var(--blue-400);text-decoration:none}}
-  a:hover{{color:var(--blue-300);text-decoration:underline}}
+  .risk-bar{{height:10px;border-radius:5px;background:var(--surface2);margin-top:.4rem}}
+  .risk-fill{{height:100%;border-radius:5px}}
+  a{{color:var(--violet-lit);text-decoration:none}}
+  a:hover{{color:#c4b5fd;text-decoration:underline}}
   h1,h2,h3{{font-weight:700}}
   @media(prefers-color-scheme:light){{
-    :root{{--navy-950:#f0f4ff;--navy-900:#ffffff;--navy-800:#e8edf8;--navy-700:#d1daf0;
-      --text:#0f1c3f;--text-muted:#4a6080;--border:#c5d0e8}}
-    tr:hover td{{background:#e8edf8}}
+    :root{{--bg:#f5f3ff;--surface:#ffffff;--surface2:#ede9fe;--surface3:#ddd6fe;
+      --text:#1e1b4b;--text-muted:#4c1d95;--border:#c4b5fd}}
+    tr:hover td{{background:#ede9fe}}
   }}
   [data-theme="dark"]{{
-    --navy-950:#060d1f!important;--navy-900:#0a1628!important;
-    --navy-800:#0f2044!important;--navy-700:#1a3160!important;
-    --text:#e8edf5!important;--text-muted:#8fa3c0!important;--border:#1e3358!important;
+    --bg:#0c0e1a!important;--surface:#111322!important;--surface2:#1a1d30!important;
+    --surface3:#252840!important;--text:#e2e4f0!important;--text-muted:#8b90b0!important;
+    --border:#2a2d45!important;
   }}
+  [data-theme="dark"] td{{color:#e2e4f0!important}}
+  [data-theme="dark"] tr:hover td{{background:#1a1d30!important}}
   [data-theme="light"]{{
-    --navy-950:#f0f4ff!important;--navy-900:#ffffff!important;
-    --navy-800:#e8edf8!important;--navy-700:#d1daf0!important;
-    --text:#0f1c3f!important;--text-muted:#4a6080!important;--border:#c5d0e8!important;
+    --bg:#f5f3ff!important;--surface:#ffffff!important;--surface2:#ede9fe!important;
+    --surface3:#ddd6fe!important;--text:#1e1b4b!important;--text-muted:#5b21b6!important;
+    --border:#c4b5fd!important;
   }}
-  [data-theme="light"] .navbar{{background:#ffffff;border-bottom:1px solid #c5d0e8}}
-  [data-theme="light"] .navbar h1{{color:#1d4ed8!important}}
-  [data-theme="light"] .navbar a{{color:#4a6080!important}}
-  [data-theme="light"] .navbar a:hover{{color:#1d4ed8!important}}
-  [data-theme="light"] h1,[data-theme="light"] h2,[data-theme="light"] h3{{color:#0f1c3f!important}}
-  [data-theme="light"] td{{color:#0f1c3f!important}}
-  [data-theme="light"] p,[data-theme="light"] span,[data-theme="light"] div{{color:#0f1c3f}}
-  [data-theme="light"] tr:hover td{{background:#e8edf8}}
-  [data-theme="light"] #themeBtn{{background:#e8edf8;color:#0f1c3f;border-color:#c5d0e8}}
+  [data-theme="light"] body{{background:#f5f3ff!important}}
+  [data-theme="light"] .navbar{{background:#ffffff!important;border-bottom:1px solid #c4b5fd!important}}
+  [data-theme="light"] .navbar h1{{color:#6d28d9!important}}
+  [data-theme="light"] .navbar a{{color:#5b21b6!important}}
+  [data-theme="light"] .navbar a:hover{{color:#7c3aed!important}}
+  [data-theme="light"] h1,[data-theme="light"] h2,[data-theme="light"] h3{{color:#1e1b4b!important}}
+  [data-theme="light"] td{{color:#1e1b4b!important}}
+  [data-theme="light"] th{{color:#4c1d95!important}}
+  [data-theme="light"] p{{color:#1e1b4b!important}}
+  [data-theme="light"] .card{{background:#ffffff!important;border-color:#c4b5fd!important}}
+  [data-theme="light"] tr:hover td{{background:#ede9fe!important}}
+  [data-theme="light"] #themeBtn{{background:#ede9fe!important;color:#4c1d95!important;border-color:#c4b5fd!important}}
+  [data-theme="light"] input,[data-theme="light"] select,[data-theme="light"] textarea{{background:#ffffff!important;color:#1e1b4b!important;border-color:#c4b5fd!important}}
+  [data-theme="light"] input::placeholder,[data-theme="light"] textarea::placeholder{{color:#6b7280!important}}
+  [data-theme="light"] .form-group label{{color:#4c1d95!important}}
+  [data-theme="light"] .card{{box-shadow:0 4px 24px rgba(124,58,237,.08)!important}}
+  [data-theme="light"] span{{color:#1e1b4b!important}}
+  [data-theme="light"] small{{color:#4c1d95!important}}
+  [data-theme="light"] *{{color:#1e1b4b}}
+  [data-theme="light"] .badge-critical{{color:#dc2626!important}}
+  [data-theme="light"] .badge-high{{color:#d97706!important}}
+  [data-theme="light"] .badge-moderate{{color:#7c3aed!important}}
+  [data-theme="light"] .badge-low{{color:#059669!important}}
+  [data-theme="light"] .btn-primary{{color:#fff!important}}
+  [data-theme="light"] .btn-danger{{color:#fff!important}}
+  [data-theme="light"] a{{color:#6d28d9!important}}
+  [data-theme="light"] a:hover{{color:#7c3aed!important}}
+  [data-theme="light"] .navbar a{{color:#5b21b6!important}}
+  [data-theme="light"] #themeBtn{{color:#4c1d95!important}}
 </style>
 </head>
 <body>
@@ -231,7 +253,7 @@ async def login_page_old(error: str = ""):
     <div style="max-width:420px;margin:4rem auto">
       <div class="card">
         <h2>🔐 Doctor Login</h2>
-        <p style="color:#64748b;font-size:.85rem;margin-bottom:1.5rem">
+        <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.5rem">
           AI Clinical Decision Support System
         </p>
         {err_html}
@@ -291,7 +313,7 @@ async def dashboard(session: str | None = Cookie(default=None)):
           <td>{p['age']} yrs / {p['gender']}</td>
           <td>{disease_name}</td>
           <td>{risk_badge}</td>
-          <td style="color:#64748b;font-size:.8rem">{p['registered_at'][:16]}</td>
+          <td style="color:var(--text-muted);font-size:.8rem">{p['registered_at'][:16]}</td>
           <td>
             <a href="/analyse/{p['patient_id']}">
               <button class="btn btn-primary" style="padding:.3rem .8rem;font-size:.8rem">Analyse</button>
@@ -304,8 +326,8 @@ async def dashboard(session: str | None = Cookie(default=None)):
     body = f"""
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
       <div>
-        <h2 style="color:#e2e8f0;font-size:1.4rem">Welcome, {doctor['full_name']}</h2>
-        <p style="color:#64748b">{doctor['hospital']} · {len(patients)} patient(s) registered</p>
+        <h2 style="color:var(--text);font-size:1.4rem;font-weight:700">Welcome, {doctor['full_name']}</h2>
+        <p style="color:var(--text-muted)">{doctor['hospital']} · {len(patients)} patient(s) registered</p>
       </div>
       <a href="/register-patient">
         <button class="btn btn-primary">+ Register Patient</button>
@@ -432,13 +454,13 @@ async def analyse_page(patient_id: str, session: str | None = Cookie(default=Non
     <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem">
       <a href="/dashboard">← Dashboard</a>
       <span style="color:#475569"> / </span>
-      <span style="color:#e2e8f0">{patient['full_name']}</span>
+      <span style="color:var(--text)">{patient['full_name']}</span>
     </div>
     <div class="card">
       <h2>🔬 Clinical Analysis — {disease.name}</h2>
-      <div style="color:#64748b;font-size:.85rem;margin-bottom:1.2rem">
-        Patient: <strong style="color:#e2e8f0">{patient['full_name']}</strong> ·
-        Age: <strong style="color:#e2e8f0">{patient['age']}</strong> ·
+      <div style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.2rem">
+        Patient: <strong style="color:var(--text)">{patient['full_name']}</strong> ·
+        Age: <strong style="color:var(--text)">{patient['age']}</strong> ·
         ID: <code style="color:#6ee7b7">{patient_id}</code>
       </div>
       <form method="post" action="/analyse/{patient_id}">
@@ -521,7 +543,7 @@ async def result_page(analysis_id: int, session: str | None = Cookie(default=Non
     findings_html = "".join(f"<li style='margin:.4rem 0;color:#fcd34d'>⚠ {f}</li>" for f in findings)
     recs_html = "".join(f"<li style='margin:.4rem 0;color:#86efac'>→ {r}</li>" for r in recs)
     params_html = "".join(
-        f"<tr><td style='color:#94a3b8'>{k.replace('_',' ').title()}</td><td style='color:#e2e8f0'>{v}</td></tr>"
+        f"<tr><td style='color:var(--text-muted)'>{k.replace('_',' ').title()}</td><td style='color:var(--text)'>{v}</td></tr>"
         for k, v in params.items()
     )
 
@@ -538,7 +560,7 @@ async def result_page(analysis_id: int, session: str | None = Cookie(default=Non
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
           <h2>{DISEASES[row['disease_id']].name} — Analysis Result</h2>
-          <p style="color:#64748b;font-size:.85rem;margin-top:.3rem">
+          <p style="color:var(--text-muted);font-size:.85rem;margin-top:.3rem">
             {patient['full_name']} · Age {patient['age']} · {patient['gender']} ·
             <code style="color:#6ee7b7">{row['patient_id']}</code>
           </p>
@@ -546,7 +568,7 @@ async def result_page(analysis_id: int, session: str | None = Cookie(default=Non
         {_badge(row['risk_level'])}
       </div>
       <div style="margin:1.2rem 0">
-        <div style="display:flex;justify-content:space-between;font-size:.85rem;color:#94a3b8;margin-bottom:.3rem">
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;color:var(--text-muted);margin-bottom:.3rem">
           <span>Risk Score</span><span style="color:{fill_color};font-weight:700">{pct}%</span>
         </div>
         <div class="risk-bar">
@@ -596,7 +618,7 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
     for a in analyses:
         pct = int(a["risk_score"] * 100)
         rows += f"""<tr>
-          <td style="color:#64748b;font-size:.8rem">{a['created_at'][:16]}</td>
+          <td style="color:var(--text-muted);font-size:.8rem">{a['created_at'][:16]}</td>
           <td>{DISEASES.get(a['disease_id'], type('x',(),{'name':a['disease_id']})()).name}</td>
           <td>{_badge(a['risk_level'])} {pct}%</td>
           <td><a href="/result/{a['id']}">View</a> &nbsp;
@@ -610,12 +632,12 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <h2>{patient['full_name']}</h2>
-          <p style="color:#64748b;font-size:.85rem;margin-top:.3rem">
+          <p style="color:var(--text-muted);font-size:.85rem;margin-top:.3rem">
             ID: <code style="color:#6ee7b7">{patient_id}</code> ·
             Age: {patient['age']} · {patient['gender']} ·
             Condition: {disease_name}
           </p>
-          <p style="color:#64748b;font-size:.85rem">
+          <p style="color:var(--text-muted);font-size:.85rem">
             📞 {patient.get('phone') or '—'} &nbsp;|&nbsp;
             📍 {patient.get('address') or '—'}
           </p>
@@ -638,7 +660,7 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
       <h2>Risk Trend</h2>
       <div id="ai-summary" style="margin-bottom:1.2rem;padding:1rem;border-radius:8px;
            background:#1e293b;border-left:4px solid #3b82f6;
-           color:#e2e8f0;font-size:0.95rem;min-height:2.5rem">
+           color:var(--text);font-size:0.95rem;min-height:2.5rem">
         Loading summary...
       </div>
       <canvas id="trendChart" height="110"></canvas>
