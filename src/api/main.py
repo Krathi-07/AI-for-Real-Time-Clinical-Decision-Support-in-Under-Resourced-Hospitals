@@ -147,18 +147,61 @@ def _base(title: str, body: str, doctor_name: str = "") -> str:
       --text:#0f1c3f;--text-muted:#4a6080;--border:#c5d0e8}}
     tr:hover td{{background:#e8edf8}}
   }}
+  [data-theme="dark"]{{
+    --navy-950:#060d1f!important;--navy-900:#0a1628!important;
+    --navy-800:#0f2044!important;--navy-700:#1a3160!important;
+    --text:#e8edf5!important;--text-muted:#8fa3c0!important;--border:#1e3358!important;
+  }}
+  [data-theme="light"]{{
+    --navy-950:#f0f4ff!important;--navy-900:#ffffff!important;
+    --navy-800:#e8edf8!important;--navy-700:#d1daf0!important;
+    --text:#0f1c3f!important;--text-muted:#4a6080!important;--border:#c5d0e8!important;
+  }}
+  [data-theme="light"] .navbar{{background:#ffffff;border-bottom:1px solid #c5d0e8}}
+  [data-theme="light"] .navbar h1{{color:#1d4ed8!important}}
+  [data-theme="light"] .navbar a{{color:#4a6080!important}}
+  [data-theme="light"] .navbar a:hover{{color:#1d4ed8!important}}
+  [data-theme="light"] h1,[data-theme="light"] h2,[data-theme="light"] h3{{color:#0f1c3f!important}}
+  [data-theme="light"] td{{color:#0f1c3f!important}}
+  [data-theme="light"] p,[data-theme="light"] span,[data-theme="light"] div{{color:#0f1c3f}}
+  [data-theme="light"] tr:hover td{{background:#e8edf8}}
+  [data-theme="light"] #themeBtn{{background:#e8edf8;color:#0f1c3f;border-color:#c5d0e8}}
 </style>
 </head>
 <body>
 <nav class="navbar">
-  <h1>🏥 ClinicalAI — Decision Support</h1>
-  <div>{nav}
+  <h1>ClinicalAI — Decision Support</h1>
+  <div style="display:flex;align-items:center;gap:1rem">
+    <button id="themeBtn" onclick="toggleTheme()"
+      style="background:var(--navy-800);border:1px solid var(--border);color:var(--text);
+             padding:.3rem .8rem;border-radius:20px;cursor:pointer;font-size:.78rem;
+             font-weight:600;font-family:Inter,sans-serif;transition:.2s">
+      Dark Mode
+    </button>
+    {nav}
     {"<a href='/dashboard'>Dashboard</a><a href='/register-patient'>Register Patient</a><a href='/logout'>Logout</a>" if doctor_name else ""}
   </div>
 </nav>
 <div class="container">
 {body}
 </div>
+<script>
+(function(){{
+  var t=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+  document.documentElement.setAttribute('data-theme',t);
+  document.addEventListener('DOMContentLoaded',function(){{
+    var btn=document.getElementById('themeBtn');
+    if(btn)btn.textContent=t==='dark'?'Light Mode':'Dark Mode';
+  }});
+}})();
+function toggleTheme(){{
+  var t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);
+  localStorage.setItem('theme',t);
+  var btn=document.getElementById('themeBtn');
+  if(btn)btn.textContent=t==='dark'?'Light Mode':'Dark Mode';
+}}
+</script>
 </body>
 </html>"""
 
