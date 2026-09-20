@@ -1,16 +1,16 @@
-﻿"""
+# PASTE THE ENTIRE NEW main.py CONTENT HERE
+"""
 Clinical AI Decision Support — FastAPI Backend
 Handles: auth, patient registration, disease analysis, dashboard
 """
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import Cookie, FastAPI, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from src.config.diseases import DISEASES, list_diseases
@@ -86,56 +86,144 @@ def _base(title: str, body: str, doctor_name: str = "") -> str:
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title} — ClinicalAI</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  :root{{
+    --bg:#0c0e1a;--surface:#111322;--surface2:#1a1d30;--surface3:#252840;
+    --violet:#7c3aed;--violet-dim:#6d28d9;--violet-lit:#a78bfa;--violet-glow:rgba(124,58,237,.15);
+    --text:#e2e4f0;--text-muted:#8b90b0;--text-dark:#0f1035;--border:#2a2d45;
+    --success:#10b981;--warning:#f59e0b;--danger:#ef4444;
+  }}
   *{{box-sizing:border-box;margin:0;padding:0}}
-  body{{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}}
-  .navbar{{background:#1e293b;padding:1rem 2rem;display:flex;justify-content:space-between;
-           align-items:center;border-bottom:1px solid #334155}}
-  .navbar h1{{color:#6ee7b7;font-size:1.2rem;font-weight:700}}
-  .navbar a{{color:#94a3b8;text-decoration:none;margin-left:1.5rem;font-size:.9rem}}
-  .navbar a:hover{{color:#6ee7b7}}
+  body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}}
+  .navbar{{background:var(--surface);padding:1rem 2rem;display:flex;justify-content:space-between;
+           align-items:center;border-bottom:1px solid var(--border);
+           box-shadow:0 1px 20px rgba(124,58,237,.1)}}
+  .navbar h1{{color:var(--violet-lit);font-size:1.2rem;font-weight:800;letter-spacing:-.01em}}
+  .navbar a{{color:var(--text-muted);text-decoration:none;margin-left:1.5rem;font-size:.9rem;
+             font-weight:500;transition:color .15s}}
+  .navbar a:hover{{color:var(--violet-lit)}}
   .container{{max-width:1100px;margin:2rem auto;padding:0 1.5rem}}
-  .card{{background:#1e293b;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;
-         border:1px solid #334155}}
-  .card h2{{color:#6ee7b7;margin-bottom:1rem;font-size:1.1rem}}
-  input,select,textarea{{width:100%;padding:.6rem .8rem;background:#0f172a;border:1px solid #334155;
-    border-radius:6px;color:#e2e8f0;font-size:.9rem;margin-top:.3rem}}
-  input:focus,select:focus{{outline:none;border-color:#6ee7b7}}
-  .btn{{padding:.6rem 1.4rem;border:none;border-radius:6px;cursor:pointer;
-        font-size:.9rem;font-weight:600;transition:.2s}}
-  .btn-primary{{background:#10b981;color:#fff}}
-  .btn-primary:hover{{background:#059669}}
-  .btn-secondary{{background:#334155;color:#e2e8f0}}
-  .btn-danger{{background:#ef4444;color:#fff}}
+  .card{{background:var(--surface);border-radius:14px;padding:1.5rem;margin-bottom:1.5rem;
+         border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,.3)}}
+  .card h2{{color:var(--violet-lit);margin-bottom:1rem;font-size:1.1rem;font-weight:700}}
+  input,select,textarea{{width:100%;padding:.6rem .8rem;background:var(--surface2);
+    border:1px solid var(--border);border-radius:8px;color:var(--text);
+    font-size:.9rem;margin-top:.3rem;font-family:'Inter',sans-serif}}
+  input:focus,select:focus{{outline:none;border-color:var(--violet);
+    box-shadow:0 0 0 3px var(--violet-glow)}}
+  .btn{{padding:.6rem 1.4rem;border:none;border-radius:8px;cursor:pointer;
+        font-size:.9rem;font-weight:600;transition:.2s;font-family:'Inter',sans-serif}}
+  .btn-primary{{background:linear-gradient(135deg,var(--violet),var(--violet-dim));color:#fff}}
+  .btn-primary:hover{{opacity:.9;transform:translateY(-1px)}}
+  .btn-secondary{{background:var(--surface3);color:var(--text)}}
+  .btn-secondary:hover{{background:var(--surface2)}}
+  .btn-danger{{background:var(--danger);color:#fff}}
   .form-group{{margin-bottom:1rem}}
-  .form-group label{{font-size:.85rem;color:#94a3b8;display:block;margin-bottom:.2rem}}
+  .form-group label{{font-size:.85rem;color:var(--text-muted);display:block;
+    margin-bottom:.2rem;font-weight:500}}
   .form-row{{display:grid;grid-template-columns:1fr 1fr;gap:1rem}}
-  .badge{{display:inline-block;padding:.2rem .6rem;border-radius:20px;font-size:.75rem;font-weight:600}}
-  .badge-critical{{background:#7f1d1d;color:#fca5a5}}
-  .badge-high{{background:#78350f;color:#fcd34d}}
-  .badge-moderate{{background:#1e3a5f;color:#93c5fd}}
-  .badge-low{{background:#14532d;color:#86efac}}
+  .badge{{display:inline-block;padding:.25rem .7rem;border-radius:20px;
+    font-size:.75rem;font-weight:700;letter-spacing:.02em}}
+  .badge-critical{{background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.4)}}
+  .badge-high{{background:rgba(245,158,11,.2);color:#fcd34d;border:1px solid rgba(245,158,11,.4)}}
+  .badge-moderate{{background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.4)}}
+  .badge-low{{background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.4)}}
   table{{width:100%;border-collapse:collapse;font-size:.9rem}}
-  th{{text-align:left;padding:.7rem 1rem;background:#0f172a;color:#64748b;font-size:.8rem;text-transform:uppercase}}
-  td{{padding:.7rem 1rem;border-bottom:1px solid #1e293b}}
-  tr:hover td{{background:#1e293b}}
-  .alert-success{{background:#14532d;color:#86efac;padding:.8rem 1rem;border-radius:8px;margin-bottom:1rem}}
-  .alert-error{{background:#7f1d1d;color:#fca5a5;padding:.8rem 1rem;border-radius:8px;margin-bottom:1rem}}
-  .risk-bar{{height:8px;border-radius:4px;background:#1e293b;margin-top:.4rem}}
-  .risk-fill{{height:100%;border-radius:4px}}
-  a{{color:#6ee7b7;text-decoration:none}}
-  a:hover{{text-decoration:underline}}
+  th{{text-align:left;padding:.8rem 1rem;background:var(--bg);color:var(--text-muted);
+     font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600}}
+  td{{padding:.8rem 1rem;border-bottom:1px solid var(--border);color:var(--text)}}
+  tr:hover td{{background:var(--surface2)}}
+  .alert-success{{background:rgba(16,185,129,.15);color:#6ee7b7;padding:.8rem 1rem;
+    border-radius:8px;margin-bottom:1rem;border:1px solid rgba(16,185,129,.3)}}
+  .alert-error{{background:rgba(239,68,68,.15);color:#fca5a5;padding:.8rem 1rem;
+    border-radius:8px;margin-bottom:1rem;border:1px solid rgba(239,68,68,.3)}}
+  .risk-bar{{height:10px;border-radius:5px;background:var(--surface2);margin-top:.4rem}}
+  .risk-fill{{height:100%;border-radius:5px}}
+  a{{color:var(--violet-lit);text-decoration:none}}
+  a:hover{{color:#c4b5fd;text-decoration:underline}}
+  h1,h2,h3{{font-weight:700}}
+  @media(prefers-color-scheme:light){{
+    :root{{--bg:#f5f3ff;--surface:#ffffff;--surface2:#ede9fe;--surface3:#ddd6fe;
+      --text:#1e1b4b;--text-muted:#4c1d95;--border:#c4b5fd}}
+    tr:hover td{{background:#ede9fe}}
+  }}
+  [data-theme="dark"]{{
+    --bg:#0c0e1a!important;--surface:#111322!important;--surface2:#1a1d30!important;
+    --surface3:#252840!important;--text:#e2e4f0!important;--text-muted:#8b90b0!important;
+    --border:#2a2d45!important;
+  }}
+  [data-theme="dark"] td{{color:#e2e4f0!important}}
+  [data-theme="dark"] tr:hover td{{background:#1a1d30!important}}
+  [data-theme="light"]{{
+    --bg:#f5f3ff!important;--surface:#ffffff!important;--surface2:#ede9fe!important;
+    --surface3:#ddd6fe!important;--text:#1e1b4b!important;--text-muted:#5b21b6!important;
+    --border:#c4b5fd!important;
+  }}
+  [data-theme="light"] body{{background:#f5f3ff!important}}
+  [data-theme="light"] .navbar{{background:#ffffff!important;border-bottom:1px solid #c4b5fd!important}}
+  [data-theme="light"] .navbar h1{{color:#6d28d9!important}}
+  [data-theme="light"] .navbar a{{color:#5b21b6!important}}
+  [data-theme="light"] .navbar a:hover{{color:#7c3aed!important}}
+  [data-theme="light"] h1,[data-theme="light"] h2,[data-theme="light"] h3{{color:#1e1b4b!important}}
+  [data-theme="light"] td{{color:#1e1b4b!important}}
+  [data-theme="light"] th{{color:#4c1d95!important}}
+  [data-theme="light"] p{{color:#1e1b4b!important}}
+  [data-theme="light"] .card{{background:#ffffff!important;border-color:#c4b5fd!important}}
+  [data-theme="light"] tr:hover td{{background:#ede9fe!important}}
+  [data-theme="light"] #themeBtn{{background:#ede9fe!important;color:#4c1d95!important;border-color:#c4b5fd!important}}
+  [data-theme="light"] input,[data-theme="light"] select,[data-theme="light"] textarea{{background:#ffffff!important;color:#1e1b4b!important;border-color:#c4b5fd!important}}
+  [data-theme="light"] input::placeholder,[data-theme="light"] textarea::placeholder{{color:#6b7280!important}}
+  [data-theme="light"] .form-group label{{color:#4c1d95!important}}
+  [data-theme="light"] .card{{box-shadow:0 4px 24px rgba(124,58,237,.08)!important}}
+  [data-theme="light"] span{{color:#1e1b4b!important}}
+  [data-theme="light"] small{{color:#4c1d95!important}}
+  [data-theme="light"] *{{color:#1e1b4b}}
+  [data-theme="light"] .badge-critical{{color:#dc2626!important}}
+  [data-theme="light"] .badge-high{{color:#d97706!important}}
+  [data-theme="light"] .badge-moderate{{color:#7c3aed!important}}
+  [data-theme="light"] .badge-low{{color:#059669!important}}
+  [data-theme="light"] .btn-primary{{color:#fff!important}}
+  [data-theme="light"] .btn-danger{{color:#fff!important}}
+  [data-theme="light"] a{{color:#6d28d9!important}}
+  [data-theme="light"] a:hover{{color:#7c3aed!important}}
+  [data-theme="light"] .navbar a{{color:#5b21b6!important}}
+  [data-theme="light"] #themeBtn{{color:#4c1d95!important}}
 </style>
 </head>
 <body>
 <nav class="navbar">
-  <h1>🏥 ClinicalAI — Decision Support</h1>
-  <div>{nav}
+  <h1>ClinicalAI — Decision Support</h1>
+  <div style="display:flex;align-items:center;gap:1rem">
+    <button id="themeBtn" onclick="toggleTheme()"
+      style="background:var(--navy-800);border:1px solid var(--border);color:var(--text);
+             padding:.3rem .8rem;border-radius:20px;cursor:pointer;font-size:.78rem;
+             font-weight:600;font-family:Inter,sans-serif;transition:.2s">
+      Dark Mode
+    </button>
+    {nav}
     {"<a href='/dashboard'>Dashboard</a><a href='/register-patient'>Register Patient</a><a href='/logout'>Logout</a>" if doctor_name else ""}
   </div>
 </nav>
 <div class="container">
 {body}
 </div>
+<script>
+(function(){{
+  var t=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+  document.documentElement.setAttribute('data-theme',t);
+  document.addEventListener('DOMContentLoaded',function(){{
+    var btn=document.getElementById('themeBtn');
+    if(btn)btn.textContent=t==='dark'?'Light Mode':'Dark Mode';
+  }});
+}})();
+function toggleTheme(){{
+  var t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);
+  localStorage.setItem('theme',t);
+  var btn=document.getElementById('themeBtn');
+  if(btn)btn.textContent=t==='dark'?'Light Mode':'Dark Mode';
+}}
+</script>
 </body>
 </html>"""
 
@@ -155,12 +243,17 @@ async def root():
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(error: str = ""):
+    from fastapi.responses import FileResponse
+    return FileResponse("src/dashboard/login.html")
+
+@app.get("/login-OLD", response_class=HTMLResponse)
+async def login_page_old(error: str = ""):
     err_html = f'<div class="alert-error">{error}</div>' if error else ""
     body = f"""
     <div style="max-width:420px;margin:4rem auto">
       <div class="card">
         <h2>🔐 Doctor Login</h2>
-        <p style="color:#64748b;font-size:.85rem;margin-bottom:1.5rem">
+        <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.5rem">
           AI Clinical Decision Support System
         </p>
         {err_html}
@@ -220,7 +313,7 @@ async def dashboard(session: str | None = Cookie(default=None)):
           <td>{p['age']} yrs / {p['gender']}</td>
           <td>{disease_name}</td>
           <td>{risk_badge}</td>
-          <td style="color:#64748b;font-size:.8rem">{p['registered_at'][:16]}</td>
+          <td style="color:var(--text-muted);font-size:.8rem">{p['registered_at'][:16]}</td>
           <td>
             <a href="/analyse/{p['patient_id']}">
               <button class="btn btn-primary" style="padding:.3rem .8rem;font-size:.8rem">Analyse</button>
@@ -233,8 +326,8 @@ async def dashboard(session: str | None = Cookie(default=None)):
     body = f"""
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
       <div>
-        <h2 style="color:#e2e8f0;font-size:1.4rem">Welcome, {doctor['full_name']}</h2>
-        <p style="color:#64748b">{doctor['hospital']} · {len(patients)} patient(s) registered</p>
+        <h2 style="color:var(--text);font-size:1.4rem;font-weight:700">Welcome, {doctor['full_name']}</h2>
+        <p style="color:var(--text-muted)">{doctor['hospital']} · {len(patients)} patient(s) registered</p>
       </div>
       <a href="/register-patient">
         <button class="btn btn-primary">+ Register Patient</button>
@@ -361,13 +454,13 @@ async def analyse_page(patient_id: str, session: str | None = Cookie(default=Non
     <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem">
       <a href="/dashboard">← Dashboard</a>
       <span style="color:#475569"> / </span>
-      <span style="color:#e2e8f0">{patient['full_name']}</span>
+      <span style="color:var(--text)">{patient['full_name']}</span>
     </div>
     <div class="card">
       <h2>🔬 Clinical Analysis — {disease.name}</h2>
-      <div style="color:#64748b;font-size:.85rem;margin-bottom:1.2rem">
-        Patient: <strong style="color:#e2e8f0">{patient['full_name']}</strong> ·
-        Age: <strong style="color:#e2e8f0">{patient['age']}</strong> ·
+      <div style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.2rem">
+        Patient: <strong style="color:var(--text)">{patient['full_name']}</strong> ·
+        Age: <strong style="color:var(--text)">{patient['age']}</strong> ·
         ID: <code style="color:#6ee7b7">{patient_id}</code>
       </div>
       <form method="post" action="/analyse/{patient_id}">
@@ -425,6 +518,7 @@ async def run_analysis(request: Request, patient_id: str, session: str | None = 
         doctor_id=doctor["id"],
     )
 
+    _db_write_analysis(patient_id, result.risk_score, result.risk_level)
     return RedirectResponse(f"/result/{analysis_id}", status_code=303)
 
 
@@ -449,7 +543,7 @@ async def result_page(analysis_id: int, session: str | None = Cookie(default=Non
     findings_html = "".join(f"<li style='margin:.4rem 0;color:#fcd34d'>⚠ {f}</li>" for f in findings)
     recs_html = "".join(f"<li style='margin:.4rem 0;color:#86efac'>→ {r}</li>" for r in recs)
     params_html = "".join(
-        f"<tr><td style='color:#94a3b8'>{k.replace('_',' ').title()}</td><td style='color:#e2e8f0'>{v}</td></tr>"
+        f"<tr><td style='color:var(--text-muted)'>{k.replace('_',' ').title()}</td><td style='color:var(--text)'>{v}</td></tr>"
         for k, v in params.items()
     )
 
@@ -466,7 +560,7 @@ async def result_page(analysis_id: int, session: str | None = Cookie(default=Non
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
           <h2>{DISEASES[row['disease_id']].name} — Analysis Result</h2>
-          <p style="color:#64748b;font-size:.85rem;margin-top:.3rem">
+          <p style="color:var(--text-muted);font-size:.85rem;margin-top:.3rem">
             {patient['full_name']} · Age {patient['age']} · {patient['gender']} ·
             <code style="color:#6ee7b7">{row['patient_id']}</code>
           </p>
@@ -474,7 +568,7 @@ async def result_page(analysis_id: int, session: str | None = Cookie(default=Non
         {_badge(row['risk_level'])}
       </div>
       <div style="margin:1.2rem 0">
-        <div style="display:flex;justify-content:space-between;font-size:.85rem;color:#94a3b8;margin-bottom:.3rem">
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;color:var(--text-muted);margin-bottom:.3rem">
           <span>Risk Score</span><span style="color:{fill_color};font-weight:700">{pct}%</span>
         </div>
         <div class="risk-bar">
@@ -524,7 +618,7 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
     for a in analyses:
         pct = int(a["risk_score"] * 100)
         rows += f"""<tr>
-          <td style="color:#64748b;font-size:.8rem">{a['created_at'][:16]}</td>
+          <td style="color:var(--text-muted);font-size:.8rem">{a['created_at'][:16]}</td>
           <td>{DISEASES.get(a['disease_id'], type('x',(),{'name':a['disease_id']})()).name}</td>
           <td>{_badge(a['risk_level'])} {pct}%</td>
           <td><a href="/result/{a['id']}">View</a> &nbsp;
@@ -538,12 +632,12 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <h2>{patient['full_name']}</h2>
-          <p style="color:#64748b;font-size:.85rem;margin-top:.3rem">
+          <p style="color:var(--text-muted);font-size:.85rem;margin-top:.3rem">
             ID: <code style="color:#6ee7b7">{patient_id}</code> ·
             Age: {patient['age']} · {patient['gender']} ·
             Condition: {disease_name}
           </p>
-          <p style="color:#64748b;font-size:.85rem">
+          <p style="color:var(--text-muted);font-size:.85rem">
             📞 {patient.get('phone') or '—'} &nbsp;|&nbsp;
             📍 {patient.get('address') or '—'}
           </p>
@@ -561,8 +655,162 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
           {rows if rows else "<tr><td colspan='4' style='text-align:center;color:#475569;padding:2rem'>No analyses yet</td></tr>"}
         </tbody>
       </table>
-    </div>"""
+    </div>
+    <div class="card" style="margin-top:1.5rem">
+      <h2>Risk Trend</h2>
+      <div id="ai-summary" style="margin-bottom:1.2rem;padding:1rem;border-radius:8px;
+           background:#1e293b;border-left:4px solid #3b82f6;
+           color:var(--text);font-size:0.95rem;min-height:2.5rem">
+        Loading summary...
+      </div>
+      <canvas id="trendChart" height="110"></canvas>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script>
+    (function() {{
+      var PATIENT_ID = "{patient_id}";
+      var LEVEL_COLOR = {{
+        CRITICAL: "rgba(220,38,38,1)",
+        HIGH:     "rgba(234,88,12,1)",
+        MEDIUM:   "rgba(234,179,8,1)",
+        LOW:      "rgba(34,197,94,1)"
+      }};
+
+      function aiSummary(points) {{
+        if (!points || points.length === 0) return "No analysis data available yet.";
+        if (points.length === 1) {{
+          return "First analysis recorded: " + points[0].risk_level + " (" + points[0].risk_score + "%). Monitor closely.";
+        }}
+        var first = points[0], last = points[points.length - 1];
+        var d1 = new Date(first.timestamp), d2 = new Date(last.timestamp);
+        var days = Math.round(Math.abs(d2 - d1) / 86400000);
+        var dayStr = days === 0 ? "today" : (days === 1 ? "over 1 day" : "over " + days + " days");
+        var diff = last.risk_score - first.risk_score;
+        if (diff > 5) {{
+          return "Risk has worsened from " + first.risk_level + " (" + first.risk_score + "%) to " +
+                 last.risk_level + " (" + last.risk_score + "%) " + dayStr + " - immediate intervention recommended.";
+        }} else if (diff < -5) {{
+          return "Risk has improved from " + first.risk_level + " (" + first.risk_score + "%) to " +
+                 last.risk_level + " (" + last.risk_score + "%) " + dayStr + ".";
+        }} else {{
+          return "Risk remains stable at approximately " + last.risk_score + "% (" + last.risk_level + ") " + dayStr + ".";
+        }}
+      }}
+
+      fetch("/patient-trend/" + encodeURIComponent(PATIENT_ID))
+        .then(function(r) {{ return r.json(); }})
+        .then(function(data) {{
+          var points = data.points || [];
+          document.getElementById("ai-summary").textContent = aiSummary(points);
+
+          if (points.length === 0) return;
+
+          var labels = points.map(function(p) {{
+            var d = new Date(p.timestamp);
+            return d.toLocaleDateString([], {{month:"short", day:"numeric"}}) + " " +
+                   d.toLocaleTimeString([], {{hour:"2-digit", minute:"2-digit"}});
+          }});
+          var scores  = points.map(function(p) {{ return p.risk_score; }});
+          var colors  = points.map(function(p) {{ return LEVEL_COLOR[p.risk_level] || "#3b82f6"; }});
+
+          new Chart(document.getElementById("trendChart").getContext("2d"), {{
+            type: "line",
+            data: {{
+              labels: labels,
+              datasets: [{{
+                label: "Risk Score (%)",
+                data: scores,
+                borderColor: "#3b82f6",
+                backgroundColor: "rgba(59,130,246,0.08)",
+                pointBackgroundColor: colors,
+                pointBorderColor: colors,
+                pointRadius: 7,
+                pointHoverRadius: 10,
+                borderWidth: 2.5,
+                tension: 0.3,
+                fill: true
+              }}]
+            }},
+            options: {{
+              responsive: true,
+              scales: {{
+                y: {{
+                  min: 0, max: 100,
+                  title: {{ display: true, text: "Risk Score (%)", color: "#94a3b8" }},
+                  ticks: {{ color: "#94a3b8" }},
+                  grid:  {{ color: "rgba(148,163,184,0.1)" }}
+                }},
+                x: {{
+                  title: {{ display: true, text: "Analysis Date", color: "#94a3b8" }},
+                  ticks: {{ color: "#94a3b8" }},
+                  grid:  {{ color: "rgba(148,163,184,0.1)" }}
+                }}
+              }},
+              plugins: {{
+                legend: {{ labels: {{ color: "#e2e8f0" }} }},
+                tooltip: {{
+                  callbacks: {{
+                    afterLabel: function(ctx) {{
+                      return "Level: " + data.points[ctx.dataIndex].risk_level;
+                    }}
+                  }}
+                }}
+              }}
+            }}
+          }});
+        }})
+        .catch(function() {{
+          document.getElementById("ai-summary").textContent = "Could not load trend data.";
+        }});
+    }})();
+    </script>"""
     return html(_base(patient["full_name"], body, doctor["full_name"]))
+
+
+# ── Patient Risk Trend ────────────────────────────────────────────────────────
+
+import sqlite3 as _sqlite3
+
+TREND_DB = "logs/analyses.db"
+
+def _get_trend_db():
+    conn = _sqlite3.connect(TREND_DB)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS analyses (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id  TEXT NOT NULL,
+            risk_score  REAL NOT NULL,
+            risk_level  TEXT NOT NULL,
+            analysed_at TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    return conn
+
+def _db_write_analysis(patient_id: str, risk_score: float, risk_level: str) -> None:
+    with _get_trend_db() as conn:
+        conn.execute(
+            "INSERT INTO analyses (patient_id, risk_score, risk_level, analysed_at) VALUES (?, ?, ?, ?)",
+            (patient_id, risk_score, risk_level, datetime.now(UTC).isoformat()),
+        )
+
+@app.get("/patient-trend/{patient_id}")
+async def patient_trend(patient_id: str, session: str | None = Cookie(default=None)):
+    require_doctor(session)
+    with _get_trend_db() as conn:
+        rows = conn.execute(
+            """SELECT analysed_at, risk_score, risk_level
+               FROM analyses
+               WHERE patient_id = ?
+               ORDER BY analysed_at ASC
+               LIMIT 20""",
+            (patient_id,),
+        ).fetchall()
+    points = [
+        {"timestamp": r[0], "risk_score": round(r[1] * 100, 1), "risk_level": r[2]}
+        for r in rows
+    ]
+    return JSONResponse(content={"patient_id": patient_id, "points": points})
 
 
 # ── Health check ──────────────────────────────────────────────────────────────
@@ -570,4 +818,3 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
 @app.get("/health")
 async def health():
     return {"status": "ok", "version": "2.0.0", "diseases": len(DISEASES)}
-    

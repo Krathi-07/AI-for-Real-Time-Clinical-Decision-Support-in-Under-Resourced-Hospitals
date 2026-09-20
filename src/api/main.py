@@ -188,18 +188,43 @@ def _base(title: str, body: str, doctor_name: str = "") -> str:
   [data-theme="light"] a:hover{{color:#7c3aed!important}}
   [data-theme="light"] .navbar a{{color:#5b21b6!important}}
   [data-theme="light"] #themeBtn{{color:#4c1d95!important}}
+
+        /* ── Dark mode ── */
+        body.dark {{ background: #0f0f1a; color: #e2e8f0; }}
+        body.dark .card, body.dark .stat-card {{ background: #1a1a2e; border-color: #2d2d4e; }}
+        body.dark table thead {{ background: #1a1a2e; }}
+        body.dark table tbody tr:hover {{ background: #1f1f35; }}
+        body.dark .navbar {{ background: #0f0f1a; border-color: #2d2d4e; }}
+        body.dark input, body.dark select {{ background: #1a1a2e; color: #e2e8f0; border-color: #3d3d6e; }}
+
+        /* ── Stat cards ── */
+        .stats-row {{ display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }}
+        .stat-card {{
+            flex: 1; min-width: 140px; background: #fff;
+            border: 1px solid #e2e8f0; border-radius: 12px;
+            padding: 1rem 1.25rem; text-align: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,.06);
+        }}
+        .stat-card .stat-value {{ font-size: 2rem; font-weight: 700; color: #6c3fcf; }}
+        .stat-card .stat-label {{ font-size: .78rem; color: #64748b; margin-top: .2rem; }}
+        .stat-card.critical .stat-value {{ color: #ef4444; }}
+        .stat-card.high .stat-value    {{ color: #f97316; }}
+        .stat-card.avg .stat-value     {{ color: #0ea5e9; }}
+
+        /* ── Search box ── */
+        .search-wrap {{ margin-bottom: 1rem; }}
+        .search-wrap input {{
+            width: 100%; padding: .55rem 1rem; border-radius: 8px;
+            border: 1px solid #d1d5db; font-size: .95rem; outline: none;
+        }}
+        .search-wrap input:focus {{ border-color: #6c3fcf; box-shadow: 0 0 0 3px rgba(108,63,207,.15); }}
 </style>
 </head>
 <body>
 <nav class="navbar">
   <h1>ClinicalAI — Decision Support</h1>
-  <div style="display:flex;align-items:center;gap:1rem">
-    <button id="themeBtn" onclick="toggleTheme()"
-      style="background:var(--navy-800);border:1px solid var(--border);color:var(--text);
-             padding:.3rem .8rem;border-radius:20px;cursor:pointer;font-size:.78rem;
-             font-weight:600;font-family:Inter,sans-serif;transition:.2s">
-      Dark Mode
-    </button>
+  <div style="display:flex;align-items:center;gap:1rem"><button id='themeBtn' onclick='toggleTheme()' style='background:var(--navy-800,#ede9fe);border:1px solid #c4b5fd;color:#6c3fcf;padding:.25rem .8rem;border-radius:20px;cursor:pointer;font-size:.82rem;font-weight:600;font-family:Inter,sans-serif'>&#9790; Dark</button> 
+    
     {nav}
     {"<a href='/dashboard'>Dashboard</a><a href='/register-patient'>Register Patient</a><a href='/logout'>Logout</a>" if doctor_name else ""}
   </div>
@@ -213,7 +238,7 @@ def _base(title: str, body: str, doctor_name: str = "") -> str:
   document.documentElement.setAttribute('data-theme',t);
   document.addEventListener('DOMContentLoaded',function(){{
     var btn=document.getElementById('themeBtn');
-    if(btn)btn.textContent=t==='dark'?'Light Mode':'Dark Mode';
+    if(btn)btn.textContent=t==='dark'?'☀ Light':'☾ Dark';
   }});
 }})();
 function toggleTheme(){{
@@ -221,9 +246,40 @@ function toggleTheme(){{
   document.documentElement.setAttribute('data-theme',t);
   localStorage.setItem('theme',t);
   var btn=document.getElementById('themeBtn');
-  if(btn)btn.textContent=t==='dark'?'Light Mode':'Dark Mode';
+  if(btn)btn.textContent=t==='dark'?'☀ Light':'☾ Dark';
 }}
 </script>
+
+        <script>
+        function filterPatients() {{
+            var inp = document.getElementById('searchInput');
+            if (!inp) return;
+            var q = inp.value.toLowerCase().trim();
+            document.querySelectorAll('#patient-table tr').forEach(function(row) {{
+                if (!q) {{ row.style.display = ''; return; }}
+                var cells = row.querySelectorAll('td');
+                var matched = false;
+                cells.forEach(function(td) {{
+                    if (td.textContent.toLowerCase().indexOf(q) >= 0) matched = true;
+                }});
+                row.style.display = matched ? '' : 'none';
+            }});
+        }}
+        async function refreshStats() {{
+            try {{
+                var r = await fetch('/stats');
+                if (!r.ok) return;
+                var d = await r.json();
+                ['total_analysed','critical_count','high_count','avg_risk_score'].forEach(function(k,i) {{
+                    var ids = ['sc-total-val','sc-crit-val','sc-high-val','sc-avg-val'];
+                    var el = document.getElementById(ids[i]);
+                    if (el) el.textContent = d[k];
+                }});
+            }} catch(e) {{ console.log('stats err',e); }}
+        }}
+        refreshStats();
+        setInterval(refreshStats, 30000);
+        </script>
 </body>
 </html>"""
 
@@ -334,13 +390,39 @@ async def dashboard(session: str | None = Cookie(default=None)):
       </a>
     </div>
     <div class="card">
-      <h2>Your Patients</h2>
+      <!-- Live stats -->
+              <div class='stats-row'>
+                <div class='stat-card'>
+                  <div class='stat-value' id='sc-total-val'>--</div>
+                  <div class='stat-label'>Total Analysed</div>
+                </div>
+                <div class='stat-card critical'>
+                  <div class='stat-value' id='sc-crit-val'>--</div>
+                  <div class='stat-label'>Critical Alerts</div>
+                </div>
+                <div class='stat-card high'>
+                  <div class='stat-value' id='sc-high-val'>--</div>
+                  <div class='stat-label'>High Risk</div>
+                </div>
+                <div class='stat-card avg'>
+                  <div class='stat-value' id='sc-avg-val'>--</div>
+                  <div class='stat-label'>Avg Risk Score</div>
+                </div>
+              </div>
+              <h3 style='font-size:1.1rem;font-weight:700;margin-bottom:.75rem'>Your Patients</h3>
+
+            <!-- Search -->
+            <div class='search-wrap'>
+              <input type='text' id='searchInput'
+                     placeholder='Search by name, patient ID, or condition...'
+                     oninput='filterPatients()' />
+            </div>
       <table>
         <thead><tr>
           <th>Patient ID</th><th>Name</th><th>Age / Gender</th>
           <th>Condition</th><th>Last Risk</th><th>Registered</th><th>Action</th>
         </tr></thead>
-        <tbody>{rows}{empty}</tbody>
+        <tbody id='patient-table'>{rows}{empty}</tbody>
       </table>
     </div>"""
     return html(_base("Dashboard", body, doctor["full_name"]))
@@ -814,6 +896,68 @@ async def patient_trend(patient_id: str, session: str | None = Cookie(default=No
 
 
 # ── Health check ──────────────────────────────────────────────────────────────
+
+
+@app.get("/stats")
+async def get_stats(session: str = Cookie(default=None)):
+    """Live dashboard stats — auto-detects schema."""
+    require_doctor(session)
+    import sqlite3 as _sq
+    db_path = Path("data/clinical.db")
+    if not db_path.exists():
+        return {"total_analysed": 0, "critical_count": 0,
+                "high_count": 0, "avg_risk_score": 0}
+    con = _sq.connect(str(db_path))
+    cur = con.cursor()
+    try:
+        # Discover tables
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = {r[0] for r in cur.fetchall()}
+
+        total, critical, high, avg = 0, 0, 0, 0
+
+        # Try 'analyses' table first, then fall back to 'audit_log'
+        for tname in ("analyses", "audit_log", "analysis_log"):
+            if tname not in tables:
+                continue
+            # Discover columns
+            cur.execute(f"PRAGMA table_info({tname})")
+            cols = {r[1] for r in cur.fetchall()}
+
+            # Total count
+            cur.execute(f"SELECT COUNT(*) FROM {tname}")
+            total = cur.fetchone()[0]
+
+            # Risk level column — try common names
+            risk_col = next((c for c in ("risk_level", "risk", "severity", "level")
+                             if c in cols), None)
+            if risk_col:
+                cur.execute(f"SELECT COUNT(*) FROM {tname} WHERE UPPER({risk_col})='CRITICAL'")
+                critical = cur.fetchone()[0]
+                cur.execute(f"SELECT COUNT(*) FROM {tname} WHERE UPPER({risk_col})='HIGH'")
+                high = cur.fetchone()[0]
+
+            # Risk score column
+            score_col = next((c for c in ("risk_score", "score", "risk_value")
+                              if c in cols), None)
+            if score_col:
+                cur.execute(f"SELECT AVG({score_col}) FROM {tname}")
+                row = cur.fetchone()[0]
+                avg = round(float(row), 1) if row else 0
+            break  # used the first matching table
+
+    except Exception:
+        print("Stats error: {e}")
+        total, critical, high, avg = 0, 0, 0, 0
+    finally:
+        con.close()
+    return {
+        "total_analysed": total,
+        "critical_count": critical,
+        "high_count": high,
+        "avg_risk_score": avg,
+    }
+
 
 @app.get("/health")
 async def health():
