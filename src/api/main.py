@@ -873,7 +873,7 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
             "<div><p style=font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem>MEDICATIONS</p>"+ch(d.medications||[],"#0ea5e9")+"</div>"+
             "<div><p style=font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem>VITALS</p>"+vt+"</div>"+
             "<div><p style=font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem>NEGATED</p>"+ch(d.negated||[],"#94a3b8")+"</div></div>"+
-            "<p style=font-size:.72rem;color:#64748b;margin-top:.5rem>Confidence: "+(d.confidence||"n/a")+" | Entities: "+(d.entity_count||0)+"</p>";
+            "<p style=font-size:.72rem;color:#64748b;margin-top:.5rem>Confidence: "+(d.confidence||"n/a")+" | Entities: "+(d.entity_count||0)+"</p>"+(d.groq_insight?"<div style=margin-top:.75rem;padding:.75rem 1rem;background:linear-gradient(135deg,#1e1b4b,#1e3a5f);border-left:4px solid #6c3fcf;border-radius:8px><p style=font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem>🤖 AI CLINICAL INSIGHT</p><p style=font-size:.9rem;color:#e2e8f0;line-height:1.5;margin:0>"+d.groq_insight+"</p></div>":"");
           res.style.display="block";
         }catch(e){document.getElementById("noteResults").innerHTML="<p style=color:#ef4444>"+e+"</p>";document.getElementById("noteResults").style.display="block";}
         finally{this.textContent="⚡ Analyse Note";this.disabled=false;}
@@ -916,7 +916,7 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
                 '<div><p style="font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem">MEDICATIONS</p>' + chips(d.medications||[], '#0ea5e9') + '</div>' +
                 '<div><p style="font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem">VITALS</p>' + vitals + '</div>' +
                 '<div><p style="font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem">NEGATED (ruled out)</p>' + chips(d.negated||[], '#94a3b8') + '</div>' +
-                '</div><p style="font-size:.72rem;color:#64748b;margin-top:.5rem">Confidence: ' + (d.confidence||'n/a') + ' | Entities: ' + (d.entity_count||0) + '</p>';
+                '</div><p style="font-size:.72rem;color:#64748b;margin-top:.5rem">Confidence: ' + (d.confidence||'n/a') + ' | Entities: ' + (d.entity_count||0) + '</p>' + (d.groq_insight ? '<div style="margin-top:.75rem;padding:.75rem 1rem;background:linear-gradient(135deg,#1e1b4b,#1e3a5f);border-left:4px solid #6c3fcf;border-radius:8px"><p style="font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem">🤖 AI CLINICAL INSIGHT</p><p style="font-size:.9rem;color:#e2e8f0;line-height:1.5;margin:0">' + d.groq_insight + '</p></div>' : '');
             document.getElementById('noteResults').style.display = 'block';
         } catch(e) {
             document.getElementById('noteResults').innerHTML = '<p style="color:#ef4444">Error: ' + e + '</p>';
@@ -1031,6 +1031,45 @@ async def analyse_note(patient_id: str, request: Request, session: str | None = 
                         out[str(item)] = str(item)
                 return out
             return {}
+        # --- Groq LLM clinical insight ---
+        groq_insight = ""
+        try:
+            import os as _os
+            from groq import Groq
+            from dotenv import load_dotenv
+            load_dotenv()
+            groq_key = _os.getenv("GROQ_API_KEY", "")
+            if groq_key:
+                groq_client = Groq(api_key=groq_key)
+                symptoms_str = ", ".join(to_str_list(result.symptoms)) or "none"
+                diseases_str = ", ".join(to_str_list(result.diseases)) or "none"
+                meds_str = ", ".join(to_str_list(result.medications)) or "none"
+                vitals_str = ", ".join(f"{k}: {v}" for k, v in safe_vitals(result.vitals_mentioned).items()) or "none"
+                negated_str = ", ".join(to_str_list(result.negated_entities)) or "none"
+                prompt = (
+                    "You are a senior clinical decision support AI for an under-resourced Indian hospital.\n"
+                    "A doctor wrote a clinical note. The NLP system extracted:\n"
+                    f"Symptoms/Diseases: {symptoms_str}\n"
+                    f"Diagnoses: {diseases_str}\n"
+                    f"Medications: {meds_str}\n"
+                    f"Vitals: {vitals_str}\n"
+                    f"Negated (absent): {negated_str}\n\n"
+                    "Give ONE concise clinical insight the doctor needs to act on RIGHT NOW.\n"
+                    "Focus on: sepsis risk, drug-dose warnings, critical vital signs, or urgent referral.\n"
+                    "Use Surviving Sepsis Campaign 2021 guidelines where relevant.\n"
+                    "Reply in exactly 1-2 sentences. Start with a risk emoji (⚠️ 🔴 💊 ✅).\n"
+                    "Do not repeat what the doctor already wrote. Give actionable guidance only."
+                )
+                chat = groq_client.chat.completions.create(
+                    model="groq/compound-mini",
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=120,
+                    temperature=0.3,
+                )
+                groq_insight = chat.choices[0].message.content.strip()
+        except Exception as ge:
+            groq_insight = f"AI insight unavailable: {ge}"
+
         return JSONResponse(content={
             "symptoms":  to_str_list(result.symptoms),
             "diseases":  to_str_list(result.diseases),
@@ -1040,6 +1079,7 @@ async def analyse_note(patient_id: str, request: Request, session: str | None = 
             "vitals":    safe_vitals(result.vitals_mentioned),
             "confidence": str(result.confidence) if result.confidence else "n/a",
             "entity_count": int(result.entity_count or 0),
+            "groq_insight": groq_insight,
         })
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
