@@ -846,6 +846,87 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
         }});
     }})();
     </script>"""
+    body += '''
+    <div class='card' style='margin-top:1.5rem'>
+      <h3 style='font-size:1rem;font-weight:700;margin-bottom:.75rem'>&#129302; AI Clinical Note Analysis</h3>
+      <p style='font-size:.82rem;color:var(--text-muted);margin-bottom:.75rem'>
+        Type free-text clinical notes. AI will extract symptoms, diagnoses, medications and vitals automatically.
+      </p>
+      <textarea id='clinicalNote' rows='4'
+        placeholder='e.g. 65F with fever, tachycardia. Suspect sepsis. No chest pain. BP 90/60. Started piperacillin-tazobactam.'
+        style='width:100%;padding:.75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.88rem;font-family:Inter,sans-serif;resize:vertical;box-sizing:border-box'
+      ></textarea>
+      <button onclick='(async function(){
+        var note=document.getElementById("clinicalNote").value.trim();
+        if(!note){alert("Please enter a note.");return;}
+        this.textContent="Analysing...";this.disabled=true;
+        try{
+          var pid=window.location.pathname.split("/").pop();
+          var r=await fetch("/analyse-note/"+pid,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({note:note})});
+          var d=await r.json();
+          var res=document.getElementById("noteResults");
+          if(d.error){res.innerHTML="<p style=color:#ef4444>"+d.error+"</p>";res.style.display="block";return;}
+          function ch(a,c){return a&&a.length?a.map(x=>"<span style=background:"+c+"20;color:"+c+";padding:.2rem .6rem;border-radius:12px;font-size:.78rem;margin:.1rem;display:inline-block>"+x+"</span>").join(""):"<span style=color:#94a3b8;font-size:.8rem>None</span>";}
+          var vt=d.vitals&&Object.keys(d.vitals).length?Object.entries(d.vitals).map(([k,v])=>"<span style=background:#f0fdf420;color:#16a34a;padding:.2rem .6rem;border-radius:12px;font-size:.78rem;margin:.1rem;display:inline-block>"+k+": "+v+"</span>").join(""):"<span style=color:#94a3b8;font-size:.8rem>None</span>";
+          res.innerHTML="<div style=display:grid;grid-template-columns:1fr_1fr;gap:.75rem>"+
+            "<div><p style=font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem>SYMPTOMS/DISEASES</p>"+ch((d.symptoms||[]).concat(d.diagnoses||[]),"#6c3fcf")+"</div>"+
+            "<div><p style=font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem>MEDICATIONS</p>"+ch(d.medications||[],"#0ea5e9")+"</div>"+
+            "<div><p style=font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem>VITALS</p>"+vt+"</div>"+
+            "<div><p style=font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem>NEGATED</p>"+ch(d.negated||[],"#94a3b8")+"</div></div>"+
+            "<p style=font-size:.72rem;color:#64748b;margin-top:.5rem>Confidence: "+(d.confidence||"n/a")+" | Entities: "+(d.entity_count||0)+"</p>";
+          res.style.display="block";
+        }catch(e){document.getElementById("noteResults").innerHTML="<p style=color:#ef4444>"+e+"</p>";document.getElementById("noteResults").style.display="block";}
+        finally{this.textContent="⚡ Analyse Note";this.disabled=false;}
+      }).call(this)'
+        style='margin-top:.75rem;background:#6c3fcf;color:#fff;border:none;padding:.55rem 1.5rem;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:600'>
+        &#9889; Analyse Note
+      </button>
+      <div id='noteResults' style='display:none;margin-top:1rem'></div>
+    </div>
+
+    <script>
+    async function analyseNote() {
+        var note = document.getElementById('clinicalNote').value.trim();
+        if (!note) { alert('Please enter a clinical note.'); return; }
+        var btn = document.querySelector('button[onclick="analyseNote()"]');
+        if (btn) { btn.textContent = 'Analysing...'; btn.disabled = true; }
+        try {
+            var pid = window.location.pathname.split('/').pop();
+            var r = await fetch('/analyse-note/' + pid, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({note: note})
+            });
+            var d = await r.json();
+            if (d.error) {
+                document.getElementById('noteResults').innerHTML = '<p style="color:#ef4444">Error: ' + d.error + '</p>';
+                document.getElementById('noteResults').style.display = 'block';
+                return;
+            }
+            function chips(arr, color) {
+                if (!arr || !arr.length) return '<span style="color:#94a3b8;font-size:.8rem">None detected</span>';
+                return arr.map(function(x) { return '<span style="background:' + color + '20;color:' + color + ';padding:.2rem .6rem;border-radius:12px;font-size:.78rem;margin:.1rem;display:inline-block">' + x + '</span>'; }).join('');
+            }
+            var vitals = d.vitals && Object.keys(d.vitals).length
+                ? Object.entries(d.vitals).map(function(kv) { return '<span style="background:#f0fdf420;color:#16a34a;padding:.2rem .6rem;border-radius:12px;font-size:.78rem;margin:.1rem;display:inline-block">' + kv[0] + ': ' + kv[1] + '</span>'; }).join('')
+                : '<span style="color:#94a3b8;font-size:.8rem">None detected</span>';
+            document.getElementById('noteResults').innerHTML =
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.5rem">' +
+                '<div><p style="font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem">SYMPTOMS / DISEASES</p>' + chips((d.symptoms||[]).concat(d.diagnoses||[]), '#6c3fcf') + '</div>' +
+                '<div><p style="font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem">MEDICATIONS</p>' + chips(d.medications||[], '#0ea5e9') + '</div>' +
+                '<div><p style="font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem">VITALS</p>' + vitals + '</div>' +
+                '<div><p style="font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:.3rem">NEGATED (ruled out)</p>' + chips(d.negated||[], '#94a3b8') + '</div>' +
+                '</div><p style="font-size:.72rem;color:#64748b;margin-top:.5rem">Confidence: ' + (d.confidence||'n/a') + ' | Entities: ' + (d.entity_count||0) + '</p>';
+            document.getElementById('noteResults').style.display = 'block';
+        } catch(e) {
+            document.getElementById('noteResults').innerHTML = '<p style="color:#ef4444">Error: ' + e + '</p>';
+            document.getElementById('noteResults').style.display = 'block';
+        } finally {
+            if (btn) { btn.textContent = '⚡ Analyse Note'; btn.disabled = false; }
+        }
+    }
+    </script>
+'''
     return html(_base(patient["full_name"], body, doctor["full_name"]))
 
 
@@ -907,6 +988,61 @@ async def patient_trend(patient_id: str, session: str | None = Cookie(default=No
         for r in rows
     ]
     return JSONResponse(content={"patient_id": patient_id, "points": points})
+
+
+@app.post("/analyse-note/{patient_id}")
+async def analyse_note(patient_id: str, request: Request, session: str | None = Cookie(default=None)):
+    require_doctor(session)
+    data = await request.json()
+    note_text = data.get("note", "").strip()
+    if not note_text:
+        return JSONResponse(content={"error": "No note provided"}, status_code=400)
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        from src.note_parser import ClinicalNoteParser
+        parser = ClinicalNoteParser()
+        result = parser.parse(note_text)
+        # Safely serialize all fields
+        def to_str_list(x):
+            if not x: return []
+            return [str(i) for i in x]
+        def safe_vitals(v):
+            if not v: return {}
+            out = {}
+            for item in v:
+                key = str(getattr(item, 'vital_type', str(item)))
+                val = str(getattr(item, 'value', '')) + ' ' + str(getattr(item, 'unit', ''))
+                out[key] = val.strip()
+            return out
+            if isinstance(v, dict):
+                return {str(k): str(val) for k, val in v.items()}
+            if isinstance(v, list):
+                out = {}
+                for item in v:
+                    if hasattr(item, "__dict__"):
+                        d = item.__dict__
+                        key = str(d.get("name", d.get("type", str(item))))
+                        val = str(d.get("value", d.get("raw", str(item))))
+                        out[key] = val
+                    elif hasattr(item, "name"):
+                        out[str(item.name)] = str(getattr(item, "value", item))
+                    else:
+                        out[str(item)] = str(item)
+                return out
+            return {}
+        return JSONResponse(content={
+            "symptoms":  to_str_list(result.symptoms),
+            "diseases":  to_str_list(result.diseases),
+            "diagnoses": to_str_list(result.diagnoses),
+            "medications": to_str_list(result.medications),
+            "negated":   to_str_list(result.negated_entities),
+            "vitals":    safe_vitals(result.vitals_mentioned),
+            "confidence": str(result.confidence) if result.confidence else "n/a",
+            "entity_count": int(result.entity_count or 0),
+        })
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 @app.get("/stats")
 async def get_stats(session: str = Cookie(default=None)):
