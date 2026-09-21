@@ -2,9 +2,9 @@ services:
   - type: web
     name: clinical-ai
     runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
-    envVars:
+    buildCommand: pip install -r requirements.txt && pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_ner_bc5cdr_md-0.5.4.tar.gz
+    startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
-        
+      - key: GROQ_API_KEY
+        sync: false
