@@ -1,4 +1,4 @@
-# PASTE THE ENTIRE NEW main.py CONTENT HERE
+﻿# PASTE THE ENTIRE NEW main.py CONTENT HERE
 """
 Clinical AI Decision Support — FastAPI Backend
 Handles: auth, patient registration, disease analysis, dashboard
@@ -1061,7 +1061,7 @@ async def analyse_note(patient_id: str, request: Request, session: str | None = 
                     "Do not repeat what the doctor already wrote. Give actionable guidance only."
                 )
                 chat = groq_client.chat.completions.create(
-                    model="groq/compound-mini",
+                    model="compound-beta-mini",
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=120,
                     temperature=0.3,
@@ -1148,3 +1148,4 @@ async def get_stats(session: str = Cookie(default=None)):
 @app.get("/health")
 async def health():
     return {"status": "ok", "version": "2.0.0", "diseases": len(DISEASES)}
+
