@@ -156,8 +156,12 @@ def _base(title: str, body: str, doctor_name: str = "") -> str:
   [data-theme="dark"] td{{color:#f1f5f9!important}}
   [data-theme="dark"] th{{color:#94a3b8!important}}
   [data-theme="dark"] tr:hover td{{background:#1a1f35!important}}
-  [data-theme="dark"] .stat-card .stat-label{{color:#94a3b8!important}}
-  [data-theme="dark"] .stat-card .stat-value{{color:#f1f5f9!important}}
+  [data-theme="dark"] .stat-card{{background:#1a1f35!important;border:1px solid #2a2f4a!important}}
+  [data-theme="dark"] .stat-card .stat-label{{color:#94a3b8!important;font-weight:600!important}}
+  [data-theme="dark"] .stat-card .stat-value{{color:#ffffff!important;font-weight:800!important}}
+  [data-theme="dark"] .stat-card.critical .stat-value{{color:#f87171!important}}
+  [data-theme="dark"] .stat-card.high .stat-value{{color:#fb923c!important}}
+  [data-theme="dark"] .stat-card.avg .stat-value{{color:#818cf8!important}}
   [data-theme="light"]{{
     --bg:#f0f4ff!important;--surface:#ffffff!important;--surface2:#e8eef8!important;
     --surface3:#d1ddf5!important;--text:#0f172a!important;--text-muted:#1e3a5f!important;
