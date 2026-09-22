@@ -1211,11 +1211,8 @@ async def analyse_note(patient_id: str, request: Request, session: str | None = 
         groq_insight = ""
         try:
             import os as _os
-
-            from dotenv import load_dotenv
             from groq import Groq
-            load_dotenv()
-            groq_key = _os.getenv("GROQ_API_KEY", "")
+            groq_key = _os.environ.get("GROQ_API_KEY", "")
             if groq_key:
                 groq_client = Groq(api_key=groq_key)
                 symptoms_str = ", ".join(to_str_list(result.symptoms)) or "none"
