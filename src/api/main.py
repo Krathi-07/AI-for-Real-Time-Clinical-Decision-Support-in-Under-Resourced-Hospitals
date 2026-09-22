@@ -203,6 +203,12 @@ def _base(title: str, body: str, doctor_name: str = "") -> str:
   [data-theme="light"] .stat-card.critical .stat-value{{color:#dc2626!important}}
   [data-theme="light"] .stat-card.high .stat-value{{color:#b45309!important}}
   [data-theme="light"] .stat-card.avg .stat-value{{color:#1d4ed8!important}}
+  [data-theme="light"]{{--finding-color:#b45309;--rec-color:#059669}}
+  [data-theme="light"] .card{{border-left-color:inherit}}
+  [data-theme="light"] h2{{color:#0f172a!important}}
+  [data-theme="light"] .card h2{{color:#1e3a5f!important}}
+  [data-theme="light"] code{{color:#1d4ed8!important;background:#e8eef8;padding:1px 5px;border-radius:4px}}
+  [data-theme="dark"]{{--finding-color:#fcd34d;--rec-color:#4ade80}}
 
         /* ── Dark mode ── */
         body.dark {{ background: #0f0f1a; color: #e2e8f0; }}
@@ -788,10 +794,10 @@ async def result_page(analysis_id: int, session: str | None = Cookie(default=Non
     recs = json.loads(row["recommendations"])
     params = json.loads(row["parameters"])
 
-    findings_html = "".join(f"<li style='margin:.4rem 0;color:#fcd34d;font-weight:500'>⚠ {f}</li>" for f in findings)
-    recs_html = "".join(f"<li style='margin:.4rem 0;color:#16a34a;font-weight:500'>→ {r}</li>" for r in recs)
+    findings_html = "".join(f"<li style='margin:.4rem 0;color:var(--finding-color,#b45309);font-weight:500'>⚠ {f}</li>" for f in findings)
+    recs_html = "".join(f"<li style='margin:.4rem 0;color:var(--rec-color,#059669);font-weight:500'>→ {r}</li>" for r in recs)
     params_html = "".join(
-        f"<tr><td style='color:var(--text-muted)'>{k.replace('_',' ').title()}</td><td style='color:var(--text)'>{v}</td></tr>"
+        f"<tr><td style='color:var(--text-muted);font-weight:500'>{k.replace('_',' ').title()}</td><td style='color:var(--text);font-weight:600'>{v}</td></tr>"
         for k, v in params.items()
     )
 
@@ -825,17 +831,17 @@ async def result_page(analysis_id: int, session: str | None = Cookie(default=Non
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
-      <div class="card">
-        <h2>🔍 Clinical Findings</h2>
+      <div class="card" style="border-left:4px solid var(--warning)">
+        <h2 style="color:var(--warning)">🔍 Clinical Findings</h2>
         <ul style="list-style:none;padding:0">{findings_html}</ul>
       </div>
-      <div class="card">
-        <h2>💊 Recommendations</h2>
+      <div class="card" style="border-left:4px solid var(--success)">
+        <h2 style="color:var(--success)">💊 Recommendations</h2>
         <ul style="list-style:none;padding:0">{recs_html}</ul>
       </div>
     </div>
-    <div class="card">
-      <h2>📊 Parameters Entered</h2>
+    <div class="card" style="border-left:4px solid var(--violet-lit)">
+      <h2 style="color:var(--violet-lit)">📊 Parameters Entered</h2>
       <table><tbody>{params_html}</tbody></table>
     </div>
     <div style="display:flex;gap:1rem;margin-top:1rem;flex-wrap:wrap">
