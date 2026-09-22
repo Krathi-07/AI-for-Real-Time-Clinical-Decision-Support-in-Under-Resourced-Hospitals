@@ -247,7 +247,7 @@ def _base(title: str, body: str, doctor_name: str = "") -> str:
   <div style="display:flex;align-items:center;gap:1rem"><button id='themeBtn' onclick='toggleTheme()' style='background:var(--navy-800,#ede9fe);border:1px solid #c4b5fd;color:#6c3fcf;padding:.25rem .8rem;border-radius:20px;cursor:pointer;font-size:.82rem;font-weight:600;font-family:Inter,sans-serif'>&#9790; Dark</button> 
     
     {nav}
-    {"<a href='/dashboard'>Dashboard</a><a href='/register-patient'>Register Patient</a><a href='/logout'>Logout</a>" if doctor_name else ""}
+    {"<a href='/dashboard'>Dashboard</a><a href='/discharged'>Discharged</a><a href='/register-patient'>Register Patient</a><a href='/logout'>Logout</a>" if doctor_name else ""}
   </div>
 </nav>
 <div class="container">
@@ -1283,6 +1283,66 @@ async def discharge_patient(patient_id: str, session: str | None = Cookie(defaul
             continue
     raise HTTPException(500, "Could not discharge patient")
 
+
+@app.get("/discharged", response_class=HTMLResponse)
+async def discharged_page(session: str | None = Cookie(default=None)):
+    doctor = require_doctor(session)
+    import sqlite3 as _sqdisp
+    rows_data = []
+    for db_path_d in [Path("/tmp/clinical.db"), Path("data/clinical.db"), Path("logs/analyses.db")]:
+        try:
+            con_d = _sqdisp.connect(str(db_path_d))
+            results = con_d.execute("""
+                SELECT dp.patient_id, dp.discharged_at,
+                       p.full_name, p.age, p.gender, p.disease_id
+                FROM discharged_patients dp
+                LEFT JOIN patients p ON dp.patient_id = p.patient_id
+                ORDER BY dp.discharged_at DESC
+            """).fetchall()
+            con_d.close()
+            if results:
+                rows_data = results
+                break
+        except Exception:
+            continue
+
+    rows_html = ""
+    for r in rows_data:
+        pid, disc_at, name, age, gender, disease_id = r
+        disease_name = DISEASES.get(disease_id or "", type("x", (), {"name": disease_id or "Unknown"})()).name
+        disc_time = disc_at[:16] if disc_at else "—"
+        name = name or "Unknown"
+        age_gen = f"{age} yrs / {gender}" if age else "—"
+        rows_html += f"""<tr>
+          <td><a href="/patient/{pid}">{pid}</a></td>
+          <td>{name}</td>
+          <td>{age_gen}</td>
+          <td>{disease_name}</td>
+          <td style="color:var(--text-muted);font-size:.85rem">{disc_time}</td>
+          <td><span class="badge badge-low">✓ Discharged</span></td>
+        </tr>"""
+
+    empty = "<tr><td colspan='6' style='text-align:center;color:var(--text-muted);padding:2rem'>No discharged patients yet</td></tr>" if not rows_html else ""
+
+    body = f"""
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+      <div>
+        <h2 style="color:var(--text);font-size:1.4rem;font-weight:700">Discharged Patients</h2>
+        <p style="color:var(--text-muted)">Patients who have been discharged from care</p>
+      </div>
+      <a href="/dashboard"><button class="btn btn-secondary">← Back to Dashboard</button></a>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr>
+          <th>Patient ID</th><th>Name</th><th>Age / Gender</th>
+          <th>Condition</th><th>Discharged At</th><th>Status</th>
+        </tr></thead>
+        <tbody>{rows_html}{empty}</tbody>
+      </table>
+    </div>"""
+    return html(_base("Discharged Patients", body, doctor["full_name"]))
+
 @app.get("/stats")
 async def get_stats(session: str = Cookie(default=None)):
     """Live dashboard stats — auto-detects schema."""
@@ -1336,19 +1396,18 @@ async def get_stats(session: str = Cookie(default=None)):
         total, critical, high, avg = 0, 0, 0, 0
     finally:
         con.close()
-    # Count discharged patients
+    # Count discharged patients — check all possible DB locations
     discharged = 0
     try:
         import sqlite3 as _sqd
-        for db_path2 in [Path("data/clinical.db"), Path("logs/analyses.db"), Path("/tmp/clinical.db")]:
+        for db_path2 in [Path("/tmp/clinical.db"), Path("data/clinical.db"), Path("logs/analyses.db")]:
             try:
-                if not db_path2.exists():
-                    continue
                 con3 = _sqd.connect(str(db_path2))
                 row3 = con3.execute("SELECT COUNT(*) FROM discharged_patients").fetchone()
                 con3.close()
-                discharged = row3[0] if row3 else 0
-                break
+                if row3 and row3[0] > 0:
+                    discharged = row3[0]
+                    break
             except Exception:
                 continue
     except Exception:
