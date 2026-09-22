@@ -178,6 +178,8 @@ def _base(title: str, body: str, doctor_name: str = "") -> str:
   [data-theme="light"] span{{color:#1e1b4b!important}}
   [data-theme="light"] small{{color:#4c1d95!important}}
   [data-theme="light"] *{{color:#1e1b4b}}
+  [data-theme="light"] li{{color:#1e1b4b!important;font-weight:500}}
+  [data-theme="light"] .card li{{color:#1e1b4b!important}}
   [data-theme="light"] .badge-critical{{color:#dc2626!important}}
   [data-theme="light"] .badge-high{{color:#d97706!important}}
   [data-theme="light"] .badge-moderate{{color:#7c3aed!important}}
@@ -282,6 +284,12 @@ function toggleTheme(){{
                     if (el) el.textContent = d[k];
                 }});
             }} catch(e) {{ console.log('stats err',e); }}
+        }}
+        async function dischargePatient(pid) {{
+            if (!confirm('Discharge patient ' + pid + '? They will be hidden from active list.')) return;
+            var r = await fetch('/discharge/' + pid, {{method:'POST'}});
+            if (r.ok) {{ location.reload(); }}
+            else {{ alert('Could not discharge patient.'); }}
         }}
         refreshStats();
         setInterval(refreshStats, 30000);
@@ -464,7 +472,7 @@ async def logout():
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(session: str | None = Cookie(default=None)):
     doctor = require_doctor(session)
-    patients = get_patients_for_doctor(doctor["id"])
+    patients = [p for p in get_patients_for_doctor(doctor["id"]) if not p.get("discharged")]
 
     rows = ""
     for p in patients:
@@ -479,10 +487,14 @@ async def dashboard(session: str | None = Cookie(default=None)):
           <td>{disease_name}</td>
           <td>{risk_badge}</td>
           <td style="color:var(--text-muted);font-size:.8rem">{p['registered_at'][:16]}</td>
-          <td>
+          <td style="display:flex;gap:.4rem;align-items:center">
             <a href="/analyse/{p['patient_id']}">
               <button class="btn btn-primary" style="padding:.3rem .8rem;font-size:.8rem">Analyse</button>
             </a>
+            <button onclick="dischargePatient('{p['patient_id']}')"
+              style="padding:.3rem .8rem;font-size:.8rem;background:#ef4444;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600">
+              Discharge
+            </button>
           </td>
         </tr>"""
 
@@ -516,6 +528,10 @@ async def dashboard(session: str | None = Cookie(default=None)):
                 <div class='stat-card avg'>
                   <div class='stat-value' id='sc-avg-val'>--</div>
                   <div class='stat-label'>Avg Risk Score</div>
+                </div>
+                <div class='stat-card' style='border-top:3px solid #6b7280'>
+                  <div class='stat-value' id='sc-disc-val' style='color:#6b7280'>--</div>
+                  <div class='stat-label'>Discharged</div>
                 </div>
               </div>
               <h3 style='font-size:1.1rem;font-weight:700;margin-bottom:.75rem'>Your Patients</h3>
@@ -602,6 +618,21 @@ async def register_patient_post(
     disease_id: str = Form(...),
 ):
     doctor = require_doctor(session)
+    # Check for duplicate patient (same name + age)
+    import sqlite3 as _sqdup
+    db_path_dup = Path("data/clinical.db")
+    if db_path_dup.exists():
+        con_dup = _sqdup.connect(str(db_path_dup))
+        existing = con_dup.execute(
+            "SELECT patient_id FROM patients WHERE LOWER(full_name)=LOWER(?) AND age=? AND doctor_id=?",
+            (full_name, age, doctor["id"])
+        ).fetchone()
+        con_dup.close()
+        if existing:
+            return RedirectResponse(
+                f"/register-patient?msg=WARNING:+Patient+{full_name}+age+{age}+already+exists+as+{existing[0]}",
+                status_code=303
+            )
     patient_id = register_patient(full_name, age, gender, phone, address, disease_id, doctor["id"])
     return RedirectResponse(f"/analyse/{patient_id}?msg=Patient+registered", status_code=303)
 
@@ -731,8 +762,8 @@ async def result_page(analysis_id: int, session: str | None = Cookie(default=Non
     recs = json.loads(row["recommendations"])
     params = json.loads(row["parameters"])
 
-    findings_html = "".join(f"<li style='margin:.4rem 0;color:#fcd34d'>⚠ {f}</li>" for f in findings)
-    recs_html = "".join(f"<li style='margin:.4rem 0;color:#86efac'>→ {r}</li>" for r in recs)
+    findings_html = "".join(f"<li style='margin:.4rem 0;color:#fcd34d;font-weight:500'>⚠ {f}</li>" for f in findings)
+    recs_html = "".join(f"<li style='margin:.4rem 0;color:#16a34a;font-weight:500'>→ {r}</li>" for r in recs)
     params_html = "".join(
         f"<tr><td style='color:var(--text-muted)'>{k.replace('_',' ').title()}</td><td style='color:var(--text)'>{v}</td></tr>"
         for k, v in params.items()
@@ -930,18 +961,18 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
               scales: {{
                 y: {{
                   min: 0, max: 100,
-                  title: {{ display: true, text: "Risk Score (%)", color: "#94a3b8" }},
-                  ticks: {{ color: "#94a3b8" }},
+                  title: {{ display: true, text: "Risk Score (%)", color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#94a3b8" }},
+                  ticks: {{ color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#94a3b8" }},
                   grid:  {{ color: "rgba(148,163,184,0.1)" }}
                 }},
                 x: {{
-                  title: {{ display: true, text: "Analysis Date", color: "#94a3b8" }},
-                  ticks: {{ color: "#94a3b8" }},
+                  title: {{ display: true, text: "Analysis Date", color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#94a3b8" }},
+                  ticks: {{ color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#94a3b8" }},
                   grid:  {{ color: "rgba(148,163,184,0.1)" }}
                 }}
               }},
               plugins: {{
-                legend: {{ labels: {{ color: "#e2e8f0" }} }},
+                legend: {{ labels: {{ color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#e2e8f0" }} }},
                 tooltip: {{
                   callbacks: {{
                     afterLabel: function(ctx) {{
@@ -1198,6 +1229,20 @@ async def analyse_note(patient_id: str, request: Request, session: str | None = 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
+
+@app.post("/discharge/{patient_id}")
+async def discharge_patient(patient_id: str, session: str | None = Cookie(default=None)):
+    require_doctor(session)
+    import sqlite3 as _sq
+    db_path = Path("data/clinical.db")
+    if not db_path.exists():
+        raise HTTPException(404, "DB not found")
+    conn = _sq.connect(str(db_path))
+    conn.execute("UPDATE patients SET discharged=1 WHERE patient_id=?", (patient_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "discharged", "patient_id": patient_id}
+
 @app.get("/stats")
 async def get_stats(session: str = Cookie(default=None)):
     """Live dashboard stats — auto-detects schema."""
@@ -1251,33 +1296,38 @@ async def get_stats(session: str = Cookie(default=None)):
         total, critical, high, avg = 0, 0, 0, 0
     finally:
         con.close()
+    # Count discharged patients
+    discharged = 0
+    try:
+        import sqlite3 as _sqd
+        db_path2 = Path("data/clinical.db")
+        if db_path2.exists():
+            con3 = _sqd.connect(str(db_path2))
+            discharged = con3.execute("SELECT COUNT(*) FROM patients WHERE discharged=1").fetchone()[0]
+            con3.close()
+    except Exception:
+        discharged = 0
+
     return {
         "total_analysed": total,
         "critical_count": critical,
         "high_count": high,
         "avg_risk_score": avg,
+        "discharged_count": discharged,
     }
 
 
 
 @app.get("/report/{analysis_id}")
 async def download_report(analysis_id: int, session: str | None = Cookie(default=None)):
-    """Generate and stream a PDF report for an analysis."""
+    """Generate and stream a professional PDF report."""
     import io
-
     from fastapi.responses import StreamingResponse
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import cm
-    from reportlab.platypus import (
-        HRFlowable,
-        Paragraph,
-        SimpleDocTemplate,
-        Spacer,
-        Table,
-        TableStyle,
-    )
+    from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
     doctor = require_doctor(session)
     from src.database.db import get_connection
@@ -1293,87 +1343,187 @@ async def download_report(analysis_id: int, session: str | None = Cookie(default
     recs = json.loads(row["recommendations"])
     params = json.loads(row["parameters"])
     pct = int(row["risk_score"] * 100)
+    disease = DISEASES.get(row["disease_id"], type("x", (), {"name": row["disease_id"], "icd10": "---"})())
+    disease_name = disease.name
+    icd10 = getattr(disease, "icd10", "---")
+    risk_colors_map = {"CRITICAL": "#dc2626", "HIGH": "#ea580c", "MODERATE": "#2563eb", "LOW": "#16a34a"}
+    risk_hex = risk_colors_map.get(row["risk_level"], "#2563eb")
+
+    NORMAL_RANGES = {
+        "heart_rate": (60, 100, "bpm"),
+        "systolic_bp": (90, 140, "mmHg"),
+        "diastolic_bp": (60, 90, "mmHg"),
+        "temperature": (36.1, 38.0, "C"),
+        "spo2": (95, 100, "%"),
+        "respiratory_rate": (12, 20, "/min"),
+        "troponin_i": (0, 0.04, "ng/mL"),
+        "wbc": (4.5, 11.0, "x10/uL"),
+        "creatinine": (0.6, 1.2, "mg/dL"),
+        "sodium": (135, 145, "mEq/L"),
+        "glucose": (70, 140, "mg/dL"),
+        "bmi": (18.5, 24.9, "kg/m2"),
+    }
 
     buf = io.BytesIO()
+    W = 17.4 * cm
     doc = SimpleDocTemplate(buf, pagesize=A4,
-                            leftMargin=2*cm, rightMargin=2*cm,
-                            topMargin=2*cm, bottomMargin=2*cm)
+                            leftMargin=1.8*cm, rightMargin=1.8*cm,
+                            topMargin=1.8*cm, bottomMargin=1.8*cm)
     story = []
 
-    # Header
-    header_style = ParagraphStyle("header", fontSize=18, fontName="Helvetica-Bold",
-                                   textColor=colors.HexColor("#7c3aed"), spaceAfter=4)
-    sub_style = ParagraphStyle("sub", fontSize=10, textColor=colors.HexColor("#475569"), spaceAfter=12)
-    body_style = ParagraphStyle("body", fontSize=10, leading=15, spaceAfter=6)
-    label_style = ParagraphStyle("label", fontSize=9, fontName="Helvetica-Bold",
-                                  textColor=colors.HexColor("#374151"), spaceAfter=4)
+    def ps(name, **kw):
+        return ParagraphStyle(name, **kw)
 
-    story.append(Paragraph("🏥 ClinicalAI — Decision Support Report", header_style))
-    story.append(Paragraph(f"Generated: {datetime.now(UTC).strftime('%d %b %Y, %I:%M %p')} | Doctor: {doctor['full_name']}", sub_style))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#e5e7eb")))
-    story.append(Spacer(1, 0.3*cm))
+    sec_s  = ps("sec", fontSize=10, fontName="Helvetica-Bold", textColor=colors.HexColor("#374151"), spaceBefore=10, spaceAfter=4)
+    body_s = ps("b", fontSize=9, leading=14, textColor=colors.HexColor("#1f2937"), spaceAfter=4)
 
-    # Patient info
-    story.append(Paragraph("Patient Information", label_style))
-    pt_data = [
-        ["Patient ID", row["patient_id"], "Name", patient["full_name"]],
-        ["Age", str(patient["age"]), "Gender", patient["gender"]],
-        ["Condition", DISEASES.get(row["disease_id"], type("x",(),{"name":row["disease_id"]})()).name, "Risk Level", row["risk_level"]],
-        ["Risk Score", f"{pct}%", "Analysis Date", row.get("created_at","")[:16]],
-    ]
-    pt_table = Table(pt_data, colWidths=[3.5*cm, 5.5*cm, 3.5*cm, 5.5*cm])
-    pt_table.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (0,-1), colors.HexColor("#f5f3ff")),
-        ("BACKGROUND", (2,0), (2,-1), colors.HexColor("#f5f3ff")),
-        ("FONTNAME", (0,0), (0,-1), "Helvetica-Bold"),
-        ("FONTNAME", (2,0), (2,-1), "Helvetica-Bold"),
-        ("FONTSIZE", (0,0), (-1,-1), 9),
-        ("GRID", (0,0), (-1,-1), 0.5, colors.HexColor("#e5e7eb")),
-        ("ROWBACKGROUNDS", (0,0), (-1,-1), [colors.white, colors.HexColor("#fafafa")]),
-        ("PADDING", (0,0), (-1,-1), 6),
-    ]))
-    story.append(pt_table)
-    story.append(Spacer(1, 0.4*cm))
-
-    # Findings
-    story.append(Paragraph("Clinical Findings", label_style))
-    for f in findings:
-        story.append(Paragraph(f"⚠ {f}", body_style))
-    story.append(Spacer(1, 0.3*cm))
-
-    # Recommendations
-    story.append(Paragraph("Recommendations", label_style))
-    for r in recs:
-        story.append(Paragraph(f"→ {r}", body_style))
-    story.append(Spacer(1, 0.3*cm))
-
-    # Parameters
-    story.append(Paragraph("Parameters Recorded", label_style))
-    param_rows = [["Parameter", "Value"]] + [[k.replace("_"," ").title(), str(v)] for k,v in params.items()]
-    param_table = Table(param_rows, colWidths=[9*cm, 9*cm])
-    param_table.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#7c3aed")),
-        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
-        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
-        ("FONTSIZE", (0,0), (-1,-1), 9),
-        ("GRID", (0,0), (-1,-1), 0.5, colors.HexColor("#e5e7eb")),
-        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f5f3ff")]),
-        ("PADDING", (0,0), (-1,-1), 6),
-    ]))
-    story.append(param_table)
-    story.append(Spacer(1, 0.4*cm))
-
-    # Footer
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#e5e7eb")))
+    # HEADER
+    hdr_data = [[
+        Paragraph("<b>ClinicalAI - Decision Support System</b>",
+                  ps("hh", fontSize=14, fontName="Helvetica-Bold", textColor=colors.HexColor("#111827"))),
+        Paragraph(f"<b>Report ID: {analysis_id}</b>",
+                  ps("rid", fontSize=9, textColor=colors.HexColor("#6b7280"), alignment=2)),
+    ]]
+    ht = Table(hdr_data, colWidths=[W*0.7, W*0.3])
+    ht.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"MIDDLE"),("PADDING",(0,0),(-1,-1),0)]))
+    story.append(ht)
     story.append(Paragraph(
-        "This report is generated by ClinicalAI and is intended to assist — not replace — clinical judgment.",
-        ParagraphStyle("footer", fontSize=8, textColor=colors.HexColor("#9ca3af"), spaceBefore=6)
+        "AI-Assisted Medical Report | <b>Confidential</b>",
+        ps("conf", fontSize=8, textColor=colors.HexColor("#6b7280"), spaceAfter=2)
+    ))
+    story.append(Paragraph(
+        f"Generated: {datetime.now(UTC).strftime('%d %B %Y, %H:%M UTC')} | Doctor: {doctor['full_name']} | Hospital: {doctor.get('hospital','--')}",
+        ps("sub", fontSize=9, textColor=colors.HexColor("#6b7280"), spaceAfter=4)
+    ))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#e5e7eb"), spaceAfter=8))
+
+    # PATIENT INFO
+    story.append(Paragraph("Patient Information", sec_s))
+    pi = [
+        ["Patient ID", row["patient_id"], "Full Name", patient["full_name"]],
+        ["Age", f"{patient['age']} years", "Gender", patient["gender"]],
+        ["Phone", patient.get("phone") or "--", "Address", patient.get("address") or "--"],
+        ["Condition", disease_name, "ICD-10", icd10],
+        ["Attending Doctor", doctor["full_name"], "Hospital", doctor.get("hospital","--")],
+        ["Analysis Date", row.get("created_at","")[:16], "Report Generated", datetime.now(UTC).strftime("%d %B %Y, %H:%M UTC")],
+    ]
+    pt = Table(pi, colWidths=[3*cm, 5.7*cm, 3*cm, 5.7*cm])
+    pt.setStyle(TableStyle([
+        ("FONTNAME",(0,0),(0,-1),"Helvetica-Bold"),
+        ("FONTNAME",(2,0),(2,-1),"Helvetica-Bold"),
+        ("FONTSIZE",(0,0),(-1,-1),8.5),
+        ("BACKGROUND",(0,0),(0,-1),colors.HexColor("#f9fafb")),
+        ("BACKGROUND",(2,0),(2,-1),colors.HexColor("#f9fafb")),
+        ("GRID",(0,0),(-1,-1),0.4,colors.HexColor("#e5e7eb")),
+        ("ROWBACKGROUNDS",(0,0),(-1,-1),[colors.white, colors.HexColor("#f9fafb")]),
+        ("PADDING",(0,0),(-1,-1),5),
+        ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+    ]))
+    story.append(pt)
+    story.append(Spacer(1, 0.3*cm))
+
+    # RISK SUMMARY
+    story.append(Paragraph("Risk Assessment Summary", sec_s))
+    risk_data = [
+        ["Risk Level", "Risk Score", "Disease", "ICD-10 Code"],
+        [row["risk_level"], f"{pct}%", disease_name, icd10],
+    ]
+    rt = Table(risk_data, colWidths=[3.5*cm, 3*cm, 7.9*cm, 3*cm])
+    rt.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#111827")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+        ("FONTSIZE",(0,0),(-1,-1),9),
+        ("BACKGROUND",(0,1),(0,1),colors.HexColor(risk_hex)),
+        ("TEXTCOLOR",(0,1),(0,1),colors.white),
+        ("FONTNAME",(0,1),(0,1),"Helvetica-Bold"),
+        ("ALIGN",(0,0),(-1,-1),"CENTER"),
+        ("GRID",(0,0),(-1,-1),0.4,colors.HexColor("#e5e7eb")),
+        ("PADDING",(0,0),(-1,-1),6),
+        ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+    ]))
+    story.append(rt)
+    story.append(Spacer(1, 0.3*cm))
+
+    # PARAMETERS WITH NORMAL RANGE
+    story.append(Paragraph("Clinical Parameters Recorded", sec_s))
+    param_rows = [["Parameter", "Value Recorded", "Normal Range", "Status"]]
+    for k, v in params.items():
+        norm = NORMAL_RANGES.get(k)
+        if norm:
+            lo, hi, unit = norm
+            try:
+                fv = float(v)
+                if fv > hi:
+                    status = "HIGH"
+                elif fv < lo:
+                    status = "LOW"
+                else:
+                    status = "Normal"
+                range_str = f"{lo}-{hi} {unit}"
+                val_str = f"{v} {unit}"
+            except (ValueError, TypeError):
+                status = "--"
+                range_str = f"{lo}-{hi} {unit}"
+                val_str = str(v)
+        else:
+            status = "--"
+            range_str = "--"
+            val_str = str(v)
+        param_rows.append([k.replace("_"," ").title(), val_str, range_str, status])
+
+    param_t = Table(param_rows, colWidths=[4.5*cm, 4*cm, 5*cm, 3.9*cm])
+    param_style = [
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#111827")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+        ("FONTSIZE",(0,0),(-1,-1),8.5),
+        ("GRID",(0,0),(-1,-1),0.4,colors.HexColor("#e5e7eb")),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white, colors.HexColor("#f9fafb")]),
+        ("PADDING",(0,0),(-1,-1),5),
+        ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+    ]
+    for i, rd in enumerate(param_rows[1:], start=1):
+        if rd[3] == "HIGH":
+            param_style += [("TEXTCOLOR",(3,i),(3,i),colors.HexColor("#dc2626")),("FONTNAME",(3,i),(3,i),"Helvetica-Bold")]
+        elif rd[3] == "LOW":
+            param_style += [("TEXTCOLOR",(3,i),(3,i),colors.HexColor("#ea580c")),("FONTNAME",(3,i),(3,i),"Helvetica-Bold")]
+        elif rd[3] == "Normal":
+            param_style.append(("TEXTCOLOR",(3,i),(3,i),colors.HexColor("#16a34a")))
+    param_t.setStyle(TableStyle(param_style))
+    story.append(param_t)
+    story.append(Spacer(1, 0.3*cm))
+
+    # FINDINGS
+    story.append(Paragraph("Clinical Findings", sec_s))
+    for fi in findings:
+        story.append(Paragraph(f"- {fi}", body_s))
+    story.append(Spacer(1, 0.2*cm))
+
+    # RECOMMENDATIONS
+    story.append(Paragraph("Medical Recommendations", sec_s))
+    for r in recs:
+        story.append(Paragraph(f"-> {r}", body_s))
+    story.append(Spacer(1, 0.4*cm))
+
+    # SIGNATURE
+    sig_t = Table([["Doctor Signature: __________________", "Date: __________________"]], colWidths=[W/2, W/2])
+    sig_t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#374151")),("PADDING",(0,0),(-1,-1),4)]))
+    story.append(sig_t)
+    story.append(Spacer(1, 0.3*cm))
+
+    # FOOTER
+    story.append(HRFlowable(width="100%", thickness=0.8, color=colors.HexColor("#e5e7eb")))
+    story.append(Paragraph(
+        "DISCLAIMER: This report is AI-generated and intended to assist clinical decision-making only. "
+        "It does not replace professional medical judgement. The attending doctor must review and validate "
+        "all findings before any clinical action is taken. ClinicalAI - DISHA Compliant.",
+        ps("disc", fontSize=7.5, textColor=colors.HexColor("#9ca3af"), leading=11, spaceBefore=4)
     ))
 
     doc.build(story)
     buf.seek(0)
-
-    filename = f"ClinicalAI_Report_{row['patient_id']}_{analysis_id}.pdf"
+    filename = f"ClinicalAI_Report_{row['patient_id']}_{disease_name.replace(' ','_')}_{analysis_id}.pdf"
     return StreamingResponse(
         buf,
         media_type="application/pdf",
