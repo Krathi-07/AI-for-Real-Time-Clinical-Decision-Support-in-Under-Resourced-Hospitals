@@ -218,6 +218,12 @@ def _base(title: str, body: str, doctor_name: str = "") -> str:
             border: 1px solid #d1d5db; font-size: .95rem; outline: none;
         }}
         .search-wrap input:focus {{ border-color: #6c3fcf; box-shadow: 0 0 0 3px rgba(108,63,207,.15); }}
+        /* AI summary note — always readable */
+        [data-theme="light"] #ai-summary {{
+            background: #1e293b !important;
+            color: #e2e8f0 !important;
+            border-left: 4px solid #3b82f6 !important;
+        }}
 </style>
 </head>
 <body>
@@ -299,8 +305,33 @@ async def root():
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(error: str = ""):
-    from fastapi.responses import FileResponse
-    return FileResponse("src/dashboard/login.html")
+    err_html = f'<div class="alert-error">{error}</div>' if error else ""
+    body = f"""
+    <div style="min-height:80vh;display:flex;align-items:center;justify-content:center">
+      <div class="card" style="width:100%;max-width:400px;padding:2.5rem">
+        <div style="text-align:center;margin-bottom:1.5rem">
+          <div style="font-size:2.5rem;margin-bottom:.5rem">🏥</div>
+          <h2 style="font-size:1.4rem;margin-bottom:.3rem">Doctor Login</h2>
+          <p style="color:var(--text-muted);font-size:.85rem">AI Clinical Decision Support System</p>
+        </div>
+        {err_html}
+        <form method="post" action="/login">
+          <div class="form-group">
+            <label>Username</label>
+            <input name="username" placeholder="doctor" required autocomplete="username">
+          </div>
+          <div class="form-group" style="margin-top:.75rem">
+            <label>Password</label>
+            <input type="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:1.25rem;padding:.75rem">Login</button>
+        </form>
+        <p style="font-size:.78rem;margin-top:1rem;text-align:center;color:var(--text-muted)">
+          Default: <strong>doctor</strong> / <strong>clinical2026</strong>
+        </p>
+      </div>
+    </div>"""
+    return html(_base("Login", body))
 
 @app.get("/login-OLD", response_class=HTMLResponse)
 async def login_page_old(error: str = ""):
@@ -672,9 +703,12 @@ async def result_page(analysis_id: int, session: str | None = Cookie(default=Non
       <h2>📊 Parameters Entered</h2>
       <table><tbody>{params_html}</tbody></table>
     </div>
-    <div style="display:flex;gap:1rem;margin-top:1rem">
+    <div style="display:flex;gap:1rem;margin-top:1rem;flex-wrap:wrap">
       <a href="/report/{analysis_id}">
         <button class="btn btn-primary">📄 Download PDF Report</button>
+      </a>
+      <a href="https://wa.me/?text=Patient%20{row['patient_id']}%20-%20{patient['full_name']}%20Risk%3A%20{row['risk_level']}%20({pct}%25)%20-%20ClinicalAI%20Report%3A%20https%3A%2F%2Fai-for-real-time-clinical-decision.onrender.com%2Freport%2F{analysis_id}" target="_blank">
+        <button class="btn btn-secondary" style="background:#25D366;color:#fff">💬 Share via WhatsApp</button>
       </a>
       <a href="/analyse/{row['patient_id']}">
         <button class="btn btn-secondary">🔄 Re-analyse</button>
@@ -998,7 +1032,8 @@ async def analyse_note(patient_id: str, request: Request, session: str | None = 
     if not note_text:
         return JSONResponse(content={"error": "No note provided"}, status_code=400)
     try:
-        import sys, os
+        import os
+        import sys
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
         from src.note_parser import ClinicalNoteParser
         parser = ClinicalNoteParser()
@@ -1035,8 +1070,9 @@ async def analyse_note(patient_id: str, request: Request, session: str | None = 
         groq_insight = ""
         try:
             import os as _os
-            from groq import Groq
+
             from dotenv import load_dotenv
+            from groq import Groq
             load_dotenv()
             groq_key = _os.getenv("GROQ_API_KEY", "")
             if groq_key:
@@ -1144,6 +1180,127 @@ async def get_stats(session: str = Cookie(default=None)):
         "avg_risk_score": avg,
     }
 
+
+
+@app.get("/report/{analysis_id}")
+async def download_report(analysis_id: int, session: str | None = Cookie(default=None)):
+    """Generate and stream a PDF report for an analysis."""
+    import io
+
+    from fastapi.responses import StreamingResponse
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import cm
+    from reportlab.platypus import (
+        HRFlowable,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+
+    doctor = require_doctor(session)
+    from src.database.db import get_connection
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM analyses WHERE id=?", (analysis_id,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(404, "Analysis not found")
+
+    row = dict(row)
+    patient = get_patient(row["patient_id"])
+    findings = json.loads(row["findings"])
+    recs = json.loads(row["recommendations"])
+    params = json.loads(row["parameters"])
+    pct = int(row["risk_score"] * 100)
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=2*cm, rightMargin=2*cm,
+                            topMargin=2*cm, bottomMargin=2*cm)
+    story = []
+
+    # Header
+    header_style = ParagraphStyle("header", fontSize=18, fontName="Helvetica-Bold",
+                                   textColor=colors.HexColor("#7c3aed"), spaceAfter=4)
+    sub_style = ParagraphStyle("sub", fontSize=10, textColor=colors.HexColor("#475569"), spaceAfter=12)
+    body_style = ParagraphStyle("body", fontSize=10, leading=15, spaceAfter=6)
+    label_style = ParagraphStyle("label", fontSize=9, fontName="Helvetica-Bold",
+                                  textColor=colors.HexColor("#374151"), spaceAfter=4)
+
+    story.append(Paragraph("🏥 ClinicalAI — Decision Support Report", header_style))
+    story.append(Paragraph(f"Generated: {datetime.now(UTC).strftime('%d %b %Y, %I:%M %p')} | Doctor: {doctor['full_name']}", sub_style))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#e5e7eb")))
+    story.append(Spacer(1, 0.3*cm))
+
+    # Patient info
+    story.append(Paragraph("Patient Information", label_style))
+    pt_data = [
+        ["Patient ID", row["patient_id"], "Name", patient["full_name"]],
+        ["Age", str(patient["age"]), "Gender", patient["gender"]],
+        ["Condition", DISEASES.get(row["disease_id"], type("x",(),{"name":row["disease_id"]})()).name, "Risk Level", row["risk_level"]],
+        ["Risk Score", f"{pct}%", "Analysis Date", row.get("created_at","")[:16]],
+    ]
+    pt_table = Table(pt_data, colWidths=[3.5*cm, 5.5*cm, 3.5*cm, 5.5*cm])
+    pt_table.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (0,-1), colors.HexColor("#f5f3ff")),
+        ("BACKGROUND", (2,0), (2,-1), colors.HexColor("#f5f3ff")),
+        ("FONTNAME", (0,0), (0,-1), "Helvetica-Bold"),
+        ("FONTNAME", (2,0), (2,-1), "Helvetica-Bold"),
+        ("FONTSIZE", (0,0), (-1,-1), 9),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.HexColor("#e5e7eb")),
+        ("ROWBACKGROUNDS", (0,0), (-1,-1), [colors.white, colors.HexColor("#fafafa")]),
+        ("PADDING", (0,0), (-1,-1), 6),
+    ]))
+    story.append(pt_table)
+    story.append(Spacer(1, 0.4*cm))
+
+    # Findings
+    story.append(Paragraph("Clinical Findings", label_style))
+    for f in findings:
+        story.append(Paragraph(f"⚠ {f}", body_style))
+    story.append(Spacer(1, 0.3*cm))
+
+    # Recommendations
+    story.append(Paragraph("Recommendations", label_style))
+    for r in recs:
+        story.append(Paragraph(f"→ {r}", body_style))
+    story.append(Spacer(1, 0.3*cm))
+
+    # Parameters
+    story.append(Paragraph("Parameters Recorded", label_style))
+    param_rows = [["Parameter", "Value"]] + [[k.replace("_"," ").title(), str(v)] for k,v in params.items()]
+    param_table = Table(param_rows, colWidths=[9*cm, 9*cm])
+    param_table.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#7c3aed")),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+        ("FONTSIZE", (0,0), (-1,-1), 9),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.HexColor("#e5e7eb")),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f5f3ff")]),
+        ("PADDING", (0,0), (-1,-1), 6),
+    ]))
+    story.append(param_table)
+    story.append(Spacer(1, 0.4*cm))
+
+    # Footer
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#e5e7eb")))
+    story.append(Paragraph(
+        "This report is generated by ClinicalAI and is intended to assist — not replace — clinical judgment.",
+        ParagraphStyle("footer", fontSize=8, textColor=colors.HexColor("#9ca3af"), spaceBefore=6)
+    ))
+
+    doc.build(story)
+    buf.seek(0)
+
+    filename = f"ClinicalAI_Report_{row['patient_id']}_{analysis_id}.pdf"
+    return StreamingResponse(
+        buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 @app.get("/health")
 async def health():
