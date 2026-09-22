@@ -78,7 +78,7 @@ def html(content: str) -> HTMLResponse:
 
 
 def _base(title: str, body: str, doctor_name: str = "") -> str:
-    nav = f"<span style='color:#6ee7b7'>👨‍⚕️ {doctor_name}</span>" if doctor_name else ""
+    nav = f"<span style='color:#a78bfa;font-weight:600'>👨‍⚕️ {doctor_name}</span>" if doctor_name else ""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -88,10 +88,11 @@ def _base(title: str, body: str, doctor_name: str = "") -> str:
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
   :root{{
-    --bg:#0c0e1a;--surface:#111322;--surface2:#1a1d30;--surface3:#252840;
-    --violet:#7c3aed;--violet-dim:#6d28d9;--violet-lit:#a78bfa;--violet-glow:rgba(124,58,237,.15);
-    --text:#e2e4f0;--text-muted:#8b90b0;--text-dark:#0f1035;--border:#2a2d45;
+    --bg:#0c0e1a;--surface:#111827;--surface2:#1a1f35;--surface3:#252a45;
+    --violet:#7c3aed;--violet-dim:#6d28d9;--violet-lit:#a78bfa;--violet-glow:rgba(124,58,237,.18);
+    --text:#f1f5f9;--text-muted:#94a3b8;--text-dark:#0f172a;--border:#2a2f4a;
     --success:#10b981;--warning:#f59e0b;--danger:#ef4444;
+    --navy:#1e3a5f;--navy-dim:#162d4a;--navy-lit:#2563eb;--navy-glow:rgba(30,58,95,.15);
   }}
   *{{box-sizing:border-box;margin:0;padding:0}}
   body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}}
@@ -143,53 +144,61 @@ def _base(title: str, body: str, doctor_name: str = "") -> str:
   a:hover{{color:#c4b5fd;text-decoration:underline}}
   h1,h2,h3{{font-weight:700}}
   @media(prefers-color-scheme:light){{
-    :root{{--bg:#f5f3ff;--surface:#ffffff;--surface2:#ede9fe;--surface3:#ddd6fe;
-      --text:#1e1b4b;--text-muted:#4c1d95;--border:#c4b5fd}}
-    tr:hover td{{background:#ede9fe}}
+    :root{{--bg:#f0f4ff;--surface:#ffffff;--surface2:#e8eef8;--surface3:#d1ddf5;
+      --text:#0f172a;--text-muted:#1e3a5f;--border:#93c5fd}}
+    tr:hover td{{background:#e8eef8}}
   }}
   [data-theme="dark"]{{
-    --bg:#0c0e1a!important;--surface:#111322!important;--surface2:#1a1d30!important;
-    --surface3:#252840!important;--text:#e2e4f0!important;--text-muted:#8b90b0!important;
-    --border:#2a2d45!important;
+    --bg:#0c0e1a!important;--surface:#111827!important;--surface2:#1a1f35!important;
+    --surface3:#252a45!important;--text:#f1f5f9!important;--text-muted:#94a3b8!important;
+    --border:#2a2f4a!important;
   }}
-  [data-theme="dark"] td{{color:#e2e4f0!important}}
-  [data-theme="dark"] tr:hover td{{background:#1a1d30!important}}
+  [data-theme="dark"] td{{color:#f1f5f9!important}}
+  [data-theme="dark"] th{{color:#94a3b8!important}}
+  [data-theme="dark"] tr:hover td{{background:#1a1f35!important}}
+  [data-theme="dark"] .stat-card .stat-label{{color:#94a3b8!important}}
+  [data-theme="dark"] .stat-card .stat-value{{color:#f1f5f9!important}}
   [data-theme="light"]{{
-    --bg:#f5f3ff!important;--surface:#ffffff!important;--surface2:#ede9fe!important;
-    --surface3:#ddd6fe!important;--text:#1e1b4b!important;--text-muted:#5b21b6!important;
-    --border:#c4b5fd!important;
+    --bg:#f0f4ff!important;--surface:#ffffff!important;--surface2:#e8eef8!important;
+    --surface3:#d1ddf5!important;--text:#0f172a!important;--text-muted:#1e3a5f!important;
+    --border:#93c5fd!important;
   }}
-  [data-theme="light"] body{{background:#f5f3ff!important}}
-  [data-theme="light"] .navbar{{background:#ffffff!important;border-bottom:1px solid #c4b5fd!important}}
-  [data-theme="light"] .navbar h1{{color:#6d28d9!important}}
-  [data-theme="light"] .navbar a{{color:#5b21b6!important}}
-  [data-theme="light"] .navbar a:hover{{color:#7c3aed!important}}
-  [data-theme="light"] h1,[data-theme="light"] h2,[data-theme="light"] h3{{color:#1e1b4b!important}}
-  [data-theme="light"] td{{color:#1e1b4b!important}}
-  [data-theme="light"] th{{color:#4c1d95!important}}
-  [data-theme="light"] p{{color:#1e1b4b!important}}
-  [data-theme="light"] .card{{background:#ffffff!important;border-color:#c4b5fd!important}}
-  [data-theme="light"] tr:hover td{{background:#ede9fe!important}}
-  [data-theme="light"] #themeBtn{{background:#ede9fe!important;color:#4c1d95!important;border-color:#c4b5fd!important}}
-  [data-theme="light"] input,[data-theme="light"] select,[data-theme="light"] textarea{{background:#ffffff!important;color:#1e1b4b!important;border-color:#c4b5fd!important}}
-  [data-theme="light"] input::placeholder,[data-theme="light"] textarea::placeholder{{color:#6b7280!important}}
-  [data-theme="light"] .form-group label{{color:#4c1d95!important}}
-  [data-theme="light"] .card{{box-shadow:0 4px 24px rgba(124,58,237,.08)!important}}
-  [data-theme="light"] span{{color:#1e1b4b!important}}
-  [data-theme="light"] small{{color:#4c1d95!important}}
-  [data-theme="light"] *{{color:#1e1b4b}}
-  [data-theme="light"] li{{color:#1e1b4b!important;font-weight:500}}
-  [data-theme="light"] .card li{{color:#1e1b4b!important}}
+  [data-theme="light"] body{{background:#f0f4ff!important;color:#0f172a!important}}
+  [data-theme="light"] .navbar{{background:#1e3a5f!important;border-bottom:1px solid #162d4a!important;box-shadow:0 2px 12px rgba(30,58,95,.3)!important}}
+  [data-theme="light"] .navbar h1{{color:#ffffff!important}}
+  [data-theme="light"] .navbar a{{color:#bfdbfe!important}}
+  [data-theme="light"] .navbar a:hover{{color:#ffffff!important}}
+  [data-theme="light"] #themeBtn{{background:#162d4a!important;color:#bfdbfe!important;border-color:#2563eb!important}}
+  [data-theme="light"] h1,[data-theme="light"] h2,[data-theme="light"] h3{{color:#0f172a!important}}
+  [data-theme="light"] td{{color:#0f172a!important}}
+  [data-theme="light"] th{{color:#1e3a5f!important;font-weight:700!important}}
+  [data-theme="light"] p{{color:#0f172a!important}}
+  [data-theme="light"] .card{{background:#ffffff!important;border-color:#93c5fd!important;box-shadow:0 4px 24px rgba(30,58,95,.1)!important}}
+  [data-theme="light"] tr:hover td{{background:#e8eef8!important}}
+  [data-theme="light"] input,[data-theme="light"] select,[data-theme="light"] textarea{{background:#ffffff!important;color:#0f172a!important;border-color:#93c5fd!important}}
+  [data-theme="light"] input::placeholder,[data-theme="light"] textarea::placeholder{{color:#475569!important}}
+  [data-theme="light"] .form-group label{{color:#1e3a5f!important;font-weight:600!important}}
+  [data-theme="light"] span{{color:#0f172a!important}}
+  [data-theme="light"] small{{color:#1e3a5f!important}}
+  [data-theme="light"] li{{color:#0f172a!important;font-weight:500}}
+  [data-theme="light"] .card li{{color:#0f172a!important}}
   [data-theme="light"] .badge-critical{{color:#dc2626!important}}
-  [data-theme="light"] .badge-high{{color:#d97706!important}}
-  [data-theme="light"] .badge-moderate{{color:#7c3aed!important}}
+  [data-theme="light"] .badge-high{{color:#b45309!important}}
+  [data-theme="light"] .badge-moderate{{color:#1d4ed8!important}}
   [data-theme="light"] .badge-low{{color:#059669!important}}
-  [data-theme="light"] .btn-primary{{color:#fff!important}}
+  [data-theme="light"] .btn-primary{{background:linear-gradient(135deg,#1e3a5f,#2563eb)!important;color:#fff!important}}
+  [data-theme="light"] .btn-primary:hover{{opacity:.9!important}}
   [data-theme="light"] .btn-danger{{color:#fff!important}}
-  [data-theme="light"] a{{color:#6d28d9!important}}
-  [data-theme="light"] a:hover{{color:#7c3aed!important}}
-  [data-theme="light"] .navbar a{{color:#5b21b6!important}}
-  [data-theme="light"] #themeBtn{{color:#4c1d95!important}}
+  [data-theme="light"] .btn-secondary{{background:#e8eef8!important;color:#1e3a5f!important;border:1px solid #93c5fd!important}}
+  [data-theme="light"] a{{color:#1d4ed8!important}}
+  [data-theme="light"] a:hover{{color:#2563eb!important}}
+  [data-theme="light"] .navbar a{{color:#bfdbfe!important}}
+  [data-theme="light"] .stat-card{{background:#ffffff!important;border-color:#93c5fd!important}}
+  [data-theme="light"] .stat-card .stat-label{{color:#1e3a5f!important;font-weight:600!important}}
+  [data-theme="light"] .stat-card .stat-value{{color:#0f172a!important}}
+  [data-theme="light"] .stat-card.critical .stat-value{{color:#dc2626!important}}
+  [data-theme="light"] .stat-card.high .stat-value{{color:#b45309!important}}
+  [data-theme="light"] .stat-card.avg .stat-value{{color:#1d4ed8!important}}
 
         /* ── Dark mode ── */
         body.dark {{ background: #0f0f1a; color: #e2e8f0; }}
@@ -472,7 +481,20 @@ async def logout():
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(session: str | None = Cookie(default=None)):
     doctor = require_doctor(session)
-    patients = [p for p in get_patients_for_doctor(doctor["id"]) if not p.get("discharged")]
+    import sqlite3 as _sqd2
+    discharged_ids = set()
+    for db_path_d in [Path("data/clinical.db"), Path("logs/analyses.db"), Path("/tmp/clinical.db")]:
+        try:
+            if not db_path_d.exists():
+                continue
+            con_d = _sqd2.connect(str(db_path_d))
+            rows_d = con_d.execute("SELECT patient_id FROM discharged_patients").fetchall()
+            discharged_ids.update(r[0] for r in rows_d)
+            con_d.close()
+        except Exception:
+            pass
+    all_patients = get_patients_for_doctor(doctor["id"])
+    patients = [p for p in all_patients if p["patient_id"] not in discharged_ids and not p.get("discharged")]
 
     rows = ""
     for p in patients:
@@ -1234,14 +1256,28 @@ async def analyse_note(patient_id: str, request: Request, session: str | None = 
 async def discharge_patient(patient_id: str, session: str | None = Cookie(default=None)):
     require_doctor(session)
     import sqlite3 as _sq
-    db_path = Path("data/clinical.db")
-    if not db_path.exists():
-        raise HTTPException(404, "DB not found")
-    conn = _sq.connect(str(db_path))
-    conn.execute("UPDATE patients SET discharged=1 WHERE patient_id=?", (patient_id,))
-    conn.commit()
-    conn.close()
-    return {"status": "discharged", "patient_id": patient_id}
+    # Try main db first, fall back to trend db
+    for db_path in [Path("data/clinical.db"), Path("logs/analyses.db"), Path("/tmp/clinical.db")]:
+        try:
+            if not db_path.exists() and str(db_path) != "/tmp/clinical.db":
+                continue
+            conn = _sq.connect(str(db_path))
+            # Create discharged table if not exists (for fallback DBs)
+            conn.execute("""CREATE TABLE IF NOT EXISTS discharged_patients
+                (patient_id TEXT PRIMARY KEY, discharged_at TEXT)""")
+            conn.execute("INSERT OR REPLACE INTO discharged_patients (patient_id, discharged_at) VALUES (?, ?)",
+                (patient_id, datetime.now(UTC).isoformat()))
+            # Also try updating patients table
+            try:
+                conn.execute("UPDATE patients SET discharged=1 WHERE patient_id=?", (patient_id,))
+            except Exception:
+                pass
+            conn.commit()
+            conn.close()
+            return {"status": "discharged", "patient_id": patient_id}
+        except Exception:
+            continue
+    raise HTTPException(500, "Could not discharge patient")
 
 @app.get("/stats")
 async def get_stats(session: str = Cookie(default=None)):
@@ -1300,11 +1336,17 @@ async def get_stats(session: str = Cookie(default=None)):
     discharged = 0
     try:
         import sqlite3 as _sqd
-        db_path2 = Path("data/clinical.db")
-        if db_path2.exists():
-            con3 = _sqd.connect(str(db_path2))
-            discharged = con3.execute("SELECT COUNT(*) FROM patients WHERE discharged=1").fetchone()[0]
-            con3.close()
+        for db_path2 in [Path("data/clinical.db"), Path("logs/analyses.db"), Path("/tmp/clinical.db")]:
+            try:
+                if not db_path2.exists():
+                    continue
+                con3 = _sqd.connect(str(db_path2))
+                row3 = con3.execute("SELECT COUNT(*) FROM discharged_patients").fetchone()
+                con3.close()
+                discharged = row3[0] if row3 else 0
+                break
+            except Exception:
+                continue
     except Exception:
         discharged = 0
 
@@ -1322,12 +1364,20 @@ async def get_stats(session: str = Cookie(default=None)):
 async def download_report(analysis_id: int, session: str | None = Cookie(default=None)):
     """Generate and stream a professional PDF report."""
     import io
+
     from fastapi.responses import StreamingResponse
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import cm
-    from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    from reportlab.platypus import (
+        HRFlowable,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
 
     doctor = require_doctor(session)
     from src.database.db import get_connection

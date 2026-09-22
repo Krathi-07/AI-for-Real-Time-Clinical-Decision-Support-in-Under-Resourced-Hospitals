@@ -5,8 +5,6 @@ import warnings
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-import spacy
-
 warnings.filterwarnings("ignore", message=".*W095.*")
 warnings.filterwarnings("ignore", category=FutureWarning)
 
