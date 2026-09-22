@@ -91,19 +91,28 @@ class ClinicalNoteParser:
     }
 
     def __init__(self, model_name="en_ner_bc5cdr_md"):
+     self._use_spacy = False
+     self.nlp = None
+    try:
+        import spacy as _spacy
         print(f"Loading scispaCy model: {model_name}...")
-        self.nlp = spacy.load(model_name)
+        self.nlp = _spacy.load(model_name)
         if "sentencizer" not in self.nlp.pipe_names:
             self.nlp.add_pipe("sentencizer", first=True)
+        self._use_spacy = True
         print(f"Pipeline ready. Components: {self.nlp.pipe_names}")
+    except (OSError, Exception) as e:
+        print(f"scispaCy model not available ({e}). Using regex fallback.")
 
     def parse(self, note_text):
-        if not note_text or not note_text.strip():
-            return ClinicalNoteParseResult(confidence="insufficient_data")
-        expanded_text = self._expand_abbreviations(note_text)
-        doc = self.nlp(expanded_text)
-        result = ClinicalNoteParseResult(note_length_chars=len(note_text))
-        for ent in doc.ents:
+     if not note_text or not note_text.strip():
+        return ClinicalNoteParseResult(confidence="insufficient_data")
+     if not self._use_spacy:
+        return self._regex_fallback(note_text)
+    expanded_text = self._expand_abbreviations(note_text)
+    doc = self.nlp(expanded_text)
+    result = ClinicalNoteParseResult(note_length_chars=len(note_text))
+    for ent in doc.ents:
             entity_text = ent.text.strip().lower()
             if self._is_negated(ent):
                 result.negated_entities.append(entity_text)
@@ -118,16 +127,36 @@ class ClinicalNoteParser:
                 result.chemicals.append(entity_text)
                 if self._is_medication(entity_text):
                     result.medications.append(entity_text)
-        result.vitals_mentioned = self._extract_vitals(note_text)
-        result.diseases = list(dict.fromkeys(result.diseases))
-        result.chemicals = list(dict.fromkeys(result.chemicals))
-        result.symptoms = list(dict.fromkeys(result.symptoms))
-        result.medications = list(dict.fromkeys(result.medications))
-        result.diagnoses = list(dict.fromkeys(result.diagnoses))
-        result.negated_entities = list(dict.fromkeys(result.negated_entities))
-        result.entity_count = len(result.diseases) + len(result.chemicals)
-        result.confidence = self._compute_confidence(result)
+    result.vitals_mentioned = self._extract_vitals(note_text)
+    result.diseases = list(dict.fromkeys(result.diseases))
+    result.chemicals = list(dict.fromkeys(result.chemicals))
+    result.symptoms = list(dict.fromkeys(result.symptoms))
+    result.medications = list(dict.fromkeys(result.medications))
+    result.diagnoses = list(dict.fromkeys(result.diagnoses))
+    result.negated_entities = list(dict.fromkeys(result.negated_entities))
+    result.entity_count = len(result.diseases) + len(result.chemicals)
+    result.confidence = self._compute_confidence(result)
         return result
+
+def _regex_fallback(self, note_text):
+    result = ClinicalNoteParseResult(note_length_chars=len(note_text))
+    text_lower = note_text.lower()
+    for kw in SYMPTOM_KEYWORDS:
+        if kw in text_lower:
+            result.symptoms.append(kw)
+            result.diseases.append(kw)
+    known_meds = ["amlodipine","metformin","insulin","aspirin","vancomycin",
+                  "paracetamol","ibuprofen","amoxicillin","prednisolone",
+                  "warfarin","heparin","levofloxacin","ceftriaxone"]
+    for med in known_meds:
+        if med in text_lower:
+            result.medications.append(med)
+            result.chemicals.append(med)
+    result.vitals_mentioned = self._extract_vitals(note_text)
+    result.entity_count = len(result.diseases) + len(result.chemicals)
+    total = result.entity_count + len(result.vitals_mentioned)
+    result.confidence = "low" if total == 0 else "medium" if total <= 3 else "high"
+    return result
 
     def _expand_abbreviations(self, text):
         for abbrev, expansion in ABBREVIATION_MAP.items():
