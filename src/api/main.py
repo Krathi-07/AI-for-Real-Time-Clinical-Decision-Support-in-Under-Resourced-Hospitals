@@ -487,7 +487,7 @@ async def dashboard(session: str | None = Cookie(default=None)):
     doctor = require_doctor(session)
     import sqlite3 as _sqd2
     discharged_ids = set()
-    for db_path_d in [Path("data/clinical.db"), Path("logs/analyses.db"), Path("/tmp/clinical.db")]:
+    for db_path_d in [Path("logs/analyses.db"), Path("data/clinical.db"), Path("/tmp/clinical.db")]:
         try:
             if not db_path_d.exists():
                 continue
@@ -1261,10 +1261,11 @@ async def discharge_patient(patient_id: str, session: str | None = Cookie(defaul
     require_doctor(session)
     import sqlite3 as _sq
     # Try main db first, fall back to trend db
-    for db_path in [Path("data/clinical.db"), Path("logs/analyses.db"), Path("/tmp/clinical.db")]:
+    for db_path in [Path("logs/analyses.db"), Path("data/clinical.db"), Path("/tmp/clinical.db")]:
         try:
-            if not db_path.exists() and str(db_path) != "/tmp/clinical.db":
+            if not db_path.exists() and str(db_path) not in ["/tmp/clinical.db", "logs/analyses.db"]:
                 continue
+            Path("logs").mkdir(parents=True, exist_ok=True)
             conn = _sq.connect(str(db_path))
             # Create discharged table if not exists (for fallback DBs)
             conn.execute("""CREATE TABLE IF NOT EXISTS discharged_patients
@@ -1289,7 +1290,7 @@ async def discharged_page(session: str | None = Cookie(default=None)):
     doctor = require_doctor(session)
     import sqlite3 as _sqdisp
     rows_data = []
-    for db_path_d in [Path("/tmp/clinical.db"), Path("data/clinical.db"), Path("logs/analyses.db")]:
+    for db_path_d in [Path("logs/analyses.db"), Path("data/clinical.db"), Path("/tmp/clinical.db")]:
         try:
             con_d = _sqdisp.connect(str(db_path_d))
             results = con_d.execute("""
@@ -1400,7 +1401,7 @@ async def get_stats(session: str = Cookie(default=None)):
     discharged = 0
     try:
         import sqlite3 as _sqd
-        for db_path2 in [Path("/tmp/clinical.db"), Path("data/clinical.db"), Path("logs/analyses.db")]:
+        for db_path2 in [Path("logs/analyses.db"), Path("data/clinical.db"), Path("/tmp/clinical.db")]:
             try:
                 con3 = _sqd.connect(str(db_path2))
                 row3 = con3.execute("SELECT COUNT(*) FROM discharged_patients").fetchone()
