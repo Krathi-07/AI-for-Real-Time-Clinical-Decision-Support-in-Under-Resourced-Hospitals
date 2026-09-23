@@ -1280,16 +1280,18 @@ async def discharged_page(session: str | None = Cookie(default=None)):
     import sqlite3 as _sqdisp
     rows_data = []
     try:
+        import sqlite3 as _sqdisp2
         con_d = _sqdisp.connect("/tmp/discharged.db")
         con_d.execute("CREATE TABLE IF NOT EXISTS discharged_patients (patient_id TEXT PRIMARY KEY, discharged_at TEXT)")
-        rows_data = con_d.execute("""
-            SELECT dp.patient_id, dp.discharged_at,
-                   p.full_name, p.age, p.gender, p.disease_id
-            FROM discharged_patients dp
-            LEFT JOIN patients p ON dp.patient_id = p.patient_id
-            ORDER BY dp.discharged_at DESC
-        """).fetchall()
+        disc_rows = con_d.execute("SELECT patient_id, discharged_at FROM discharged_patients ORDER BY discharged_at DESC").fetchall()
         con_d.close()
+        rows_data = []
+        for pid, disc_at in disc_rows:
+            patient = get_patient(pid)
+            if patient:
+                rows_data.append((pid, disc_at, patient["full_name"], patient["age"], patient["gender"], patient["disease_id"]))
+            else:
+                rows_data.append((pid, disc_at, "Unknown", None, None, None))
     except Exception:
         rows_data = []
 
