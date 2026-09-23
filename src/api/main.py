@@ -297,10 +297,10 @@ function toggleTheme(){{
                 var r = await fetch('/stats');
                 if (!r.ok) return;
                 var d = await r.json();
-                ['total_analysed','critical_count','high_count','avg_risk_score'].forEach(function(k,i) {{
-                    var ids = ['sc-total-val','sc-crit-val','sc-high-val','sc-avg-val'];
+                ['total_analysed','critical_count','high_count','avg_risk_score','discharged_count'].forEach(function(k,i) {{
+                    var ids = ['sc-total-val','sc-crit-val','sc-high-val','sc-avg-val','sc-disc-val'];
                     var el = document.getElementById(ids[i]);
-                    if (el) el.textContent = d[k];
+                    if (el) el.textContent = d[k] !== undefined ? d[k] : '--';
                 }});
             }} catch(e) {{ console.log('stats err',e); }}
         }}
