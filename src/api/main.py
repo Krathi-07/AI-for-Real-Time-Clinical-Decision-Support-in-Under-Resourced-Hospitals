@@ -1235,7 +1235,7 @@ async def analyse_note(patient_id: str, request: Request, session: str | None = 
                     "Do not repeat what the doctor already wrote. Give actionable guidance only."
                 )
                 chat = groq_client.chat.completions.create(
-                    model="compound-beta-mini",
+                    model="llama3-8b-8192",
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=120,
                     temperature=0.3,
