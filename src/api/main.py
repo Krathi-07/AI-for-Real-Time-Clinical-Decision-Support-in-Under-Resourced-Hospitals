@@ -493,16 +493,14 @@ async def dashboard(session: str | None = Cookie(default=None)):
     doctor = require_doctor(session)
     import sqlite3 as _sqd2
     discharged_ids = set()
-    for db_path_d in [Path("logs/analyses.db"), Path("data/clinical.db"), Path("/tmp/clinical.db")]:
-        try:
-            if not db_path_d.exists():
-                continue
-            con_d = _sqd2.connect(str(db_path_d))
-            rows_d = con_d.execute("SELECT patient_id FROM discharged_patients").fetchall()
-            discharged_ids.update(r[0] for r in rows_d)
-            con_d.close()
-        except Exception:
-            pass
+    try:
+        con_d = _sqd2.connect("/tmp/discharged.db")
+        con_d.execute("CREATE TABLE IF NOT EXISTS discharged_patients (patient_id TEXT PRIMARY KEY, discharged_at TEXT)")
+        rows_d = con_d.execute("SELECT patient_id FROM discharged_patients").fetchall()
+        discharged_ids.update(r[0] for r in rows_d)
+        con_d.close()
+    except Exception:
+        pass
     all_patients = get_patients_for_doctor(doctor["id"])
     patients = [p for p in all_patients if p["patient_id"] not in discharged_ids and not p.get("discharged")]
 
@@ -1263,29 +1261,17 @@ async def analyse_note(patient_id: str, request: Request, session: str | None = 
 async def discharge_patient(patient_id: str, session: str | None = Cookie(default=None)):
     require_doctor(session)
     import sqlite3 as _sq
-    # Try main db first, fall back to trend db
-    for db_path in [Path("logs/analyses.db"), Path("data/clinical.db"), Path("/tmp/clinical.db")]:
-        try:
-            if not db_path.exists() and str(db_path) not in ["/tmp/clinical.db", "logs/analyses.db"]:
-                continue
-            Path("logs").mkdir(parents=True, exist_ok=True)
-            conn = _sq.connect(str(db_path))
-            # Create discharged table if not exists (for fallback DBs)
-            conn.execute("""CREATE TABLE IF NOT EXISTS discharged_patients
-                (patient_id TEXT PRIMARY KEY, discharged_at TEXT)""")
-            conn.execute("INSERT OR REPLACE INTO discharged_patients (patient_id, discharged_at) VALUES (?, ?)",
-                (patient_id, datetime.now(UTC).isoformat()))
-            # Also try updating patients table
-            try:
-                conn.execute("UPDATE patients SET discharged=1 WHERE patient_id=?", (patient_id,))
-            except Exception:
-                pass
-            conn.commit()
-            conn.close()
-            return {"status": "discharged", "patient_id": patient_id}
-        except Exception:
-            continue
-    raise HTTPException(500, "Could not discharge patient")
+    # Always use /tmp — guaranteed writable on Render free tier
+    Path("/tmp").mkdir(parents=True, exist_ok=True)
+    db_path = Path("/tmp/discharged.db")
+    conn = _sq.connect(str(db_path))
+    conn.execute("""CREATE TABLE IF NOT EXISTS discharged_patients
+        (patient_id TEXT PRIMARY KEY, discharged_at TEXT)""")
+    conn.execute("INSERT OR REPLACE INTO discharged_patients (patient_id, discharged_at) VALUES (?, ?)",
+        (patient_id, datetime.now(UTC).isoformat()))
+    conn.commit()
+    conn.close()
+    return {"status": "discharged", "patient_id": patient_id}
 
 
 @app.get("/discharged", response_class=HTMLResponse)
@@ -1293,22 +1279,19 @@ async def discharged_page(session: str | None = Cookie(default=None)):
     doctor = require_doctor(session)
     import sqlite3 as _sqdisp
     rows_data = []
-    for db_path_d in [Path("logs/analyses.db"), Path("data/clinical.db"), Path("/tmp/clinical.db")]:
-        try:
-            con_d = _sqdisp.connect(str(db_path_d))
-            results = con_d.execute("""
-                SELECT dp.patient_id, dp.discharged_at,
-                       p.full_name, p.age, p.gender, p.disease_id
-                FROM discharged_patients dp
-                LEFT JOIN patients p ON dp.patient_id = p.patient_id
-                ORDER BY dp.discharged_at DESC
-            """).fetchall()
-            con_d.close()
-            if results:
-                rows_data = results
-                break
-        except Exception:
-            continue
+    try:
+        con_d = _sqdisp.connect("/tmp/discharged.db")
+        con_d.execute("CREATE TABLE IF NOT EXISTS discharged_patients (patient_id TEXT PRIMARY KEY, discharged_at TEXT)")
+        rows_data = con_d.execute("""
+            SELECT dp.patient_id, dp.discharged_at,
+                   p.full_name, p.age, p.gender, p.disease_id
+            FROM discharged_patients dp
+            LEFT JOIN patients p ON dp.patient_id = p.patient_id
+            ORDER BY dp.discharged_at DESC
+        """).fetchall()
+        con_d.close()
+    except Exception:
+        rows_data = []
 
     rows_html = ""
     for r in rows_data:
@@ -1404,16 +1387,11 @@ async def get_stats(session: str = Cookie(default=None)):
     discharged = 0
     try:
         import sqlite3 as _sqd
-        for db_path2 in [Path("logs/analyses.db"), Path("data/clinical.db"), Path("/tmp/clinical.db")]:
-            try:
-                con3 = _sqd.connect(str(db_path2))
-                row3 = con3.execute("SELECT COUNT(*) FROM discharged_patients").fetchone()
-                con3.close()
-                if row3 and row3[0] > 0:
-                    discharged = row3[0]
-                    break
-            except Exception:
-                continue
+        con3 = _sqd.connect("/tmp/discharged.db")
+        con3.execute("CREATE TABLE IF NOT EXISTS discharged_patients (patient_id TEXT PRIMARY KEY, discharged_at TEXT)")
+        row3 = con3.execute("SELECT COUNT(*) FROM discharged_patients").fetchone()
+        con3.close()
+        discharged = row3[0] if row3 else 0
     except Exception:
         discharged = 0
 
