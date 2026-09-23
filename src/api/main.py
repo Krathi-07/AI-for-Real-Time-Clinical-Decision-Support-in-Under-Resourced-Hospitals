@@ -993,18 +993,18 @@ async def patient_history(patient_id: str, session: str | None = Cookie(default=
               scales: {{
                 y: {{
                   min: 0, max: 100,
-                  title: {{ display: true, text: "Risk Score (%)", color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#94a3b8" }},
-                  ticks: {{ color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#94a3b8" }},
-                  grid:  {{ color: "rgba(148,163,184,0.1)" }}
+                  title: {{ display: true, text: "Risk Score (%)", color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#ffffff" }},
+                  ticks: {{ color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#ffffff" }},
+                  grid:  {{ color: "rgba(255,255,255,0.1)" }}
                 }},
                 x: {{
                   title: {{ display: true, text: "Analysis Date", color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#94a3b8" }},
-                  ticks: {{ color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#94a3b8" }},
-                  grid:  {{ color: "rgba(148,163,184,0.1)" }}
+                  ticks: {{ color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#ffffff" }},
+                  grid:  {{ color: "rgba(255,255,255,0.1)" }}
                 }}
               }},
               plugins: {{
-                legend: {{ labels: {{ color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#e2e8f0" }} }},
+                legend: {{ labels: {{ color: document.documentElement.getAttribute("data-theme")==="light" ? "#1e1b4b" : "#ffffff" }} }},
                 tooltip: {{
                   callbacks: {{
                     afterLabel: function(ctx) {{
